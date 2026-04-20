@@ -22,6 +22,7 @@ Once inside the console, you can run arbitrary Python code and inspect variables
 
 ```
 Interactive Sphincs+ Console.
+>>> n, h, d, a, k, w, m = 16, 8, 2, 4, 4, 16, 24
 >>> sk, pk = keygen(n, h, d, a, k, w, m)
 >>> sig = sign(msg, sk, n, h, d, a, k, w, m, rand=False)
 >>> verify(msg, sig, pk, n, h, d, a, k, w, m)
