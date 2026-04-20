@@ -1,6 +1,7 @@
 from .sphincs import keygen, sign, verify
 import code
 
+
 def main():
     namespace = {
         "keygen": keygen,
