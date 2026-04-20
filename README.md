@@ -7,10 +7,10 @@ The original paper can be found here: [The SPHINCS+ Signature Framework](https:/
 Install [Docker](https://www.docker.com/get-started/).
 
 ## Usage
-Firstly explain the signatures of sphincs keygen, sign, and verify.
-Do we need to expose any additional functions and explain them for usage? I think we should document all the functions in __all__ in __init__.py (or remove them if we don't intend users to import them).
+_TODO: Firstly explain the signatures of sphincs keygen, sign, and verify.
+Do we need to expose any additional functions and explain them for usage? I think we should document all the functions in `__all__` in `__init__.py` (or remove them if we don't intend users to import them)._
 
-It is possible to run the program is two ways: through an interactive Python Console, and through a python script.
+It is possible to run the program in two ways: through an interactive Python Console, and through a python script.
 
 ### Interactive Python Console
 To start the console, use the following command:
@@ -44,5 +44,6 @@ docker run --rm sphincsplus pytest tests/ -q
 ```
 
 ## Benchmarking
+_TODO_
 
 
