@@ -55,7 +55,9 @@ def _int_to_base_w(inp: int, w: int, out_len: int) -> list:
     return out
 
 
-def _chain(msg: bytes, start: int, steps: int, pk_seed: bytes, adrs: bytearray, w: int) -> bytes:
+def chain(msg: bytes, start: int, steps: int, pk_seed: bytes, adrs: bytearray, w: int) -> bytes | None:
+    if start + steps > w - 1:
+        return None
     if steps == 0:
         return msg
 
@@ -94,7 +96,7 @@ def wots_gen_pk(sk_seed: bytes, pk_seed: bytes, adrs: bytearray, n: int, w: int)
         _adrs_set_hash(new_adrs, 0)
 
         sk = _prf(sk_seed, new_adrs)
-        pk_list.append(_chain(sk, 0, w - 1, pk_seed, new_adrs, w))
+        pk_list.append(chain(sk, 0, w - 1, pk_seed, new_adrs, w))
 
     _adrs_set_type(pk_adrs, TYPE_WOTS_PK)
     _adrs_set_keypair(pk_adrs, _adrs_get_keypair(adrs))
@@ -122,7 +124,7 @@ def wots_sign(msg: bytes, sk_seed: bytes, pk_seed: bytes, adrs: bytearray, n: in
         _adrs_set_hash(new_adrs, 0)
 
         sk = _prf(sk_seed, new_adrs)
-        sig.append(_chain(sk, 0, msg_c[i], pk_seed, new_adrs, w))
+        sig.append(chain(sk, 0, msg_c[i], pk_seed, new_adrs, w))
 
     return sig
 
@@ -142,7 +144,7 @@ def wots_sig_to_pk(sig: list, msg: bytes, pk_seed: bytes, adrs: bytearray, n: in
         _adrs_set_hash(new_adrs, 0)
 
         pk_list.append(
-            _chain(sig[i], msg_c[i], w - 1 - msg_c[i], pk_seed, new_adrs, w)
+            chain(sig[i], msg_c[i], w - 1 - msg_c[i], pk_seed, new_adrs, w)
         )
 
     _adrs_set_type(pk_adrs, TYPE_WOTS_PK)
@@ -153,32 +155,3 @@ def wots_sig_to_pk(sig: list, msg: bytes, pk_seed: bytes, adrs: bytearray, n: in
 
 def wots_verify(sig: list, msg: bytes, pk_seed: bytes, pk: bytes, adrs: bytearray, n: int, w: int) -> bool:
     return wots_sig_to_pk(sig, msg, pk_seed, adrs, n, w) == pk
-
-
-def gen_pk(sk_seed: bytes, pk_seed: bytes, adrs: bytearray, n: int, w: int) -> bytes:
-    return wots_gen_pk(sk_seed, pk_seed, adrs, n, w)
-
-
-def sign(msg: bytes, sk_seed: bytes, pk_seed: bytes, adrs: bytearray, n: int, w: int) -> list:
-    return wots_sign(msg, sk_seed, pk_seed, adrs, n, w)
-
-
-def sig_to_pk(sig: list, msg: bytes, pk_seed: bytes, adrs: bytearray, n: int, w: int) -> bytes:
-    return wots_sig_to_pk(sig, msg, pk_seed, adrs, n, w)
-
-
-def verify(sig: list, msg: bytes, pk_seed: bytes, pk: bytes, adrs: bytearray, n: int, w: int) -> bool:
-    return wots_verify(sig, msg, pk_seed, pk, adrs, n, w)
-
-
-def chain(
-    inp: bytes,
-    start: int,
-    steps: int,
-    pk_seed: bytes,
-    adrs: bytearray,
-    w: int,
-) -> bytes | None:
-    if start + steps > w - 1:
-        return None
-    return _chain(inp, start, steps, pk_seed, adrs, w)

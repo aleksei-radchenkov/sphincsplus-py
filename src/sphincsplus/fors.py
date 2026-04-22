@@ -82,7 +82,14 @@ def fors_pk_gen(sk_seed: bytes, pk_seed: bytes, adrs: bytearray, k: int, a: int)
     return _tl(pk_seed, pk_adrs, b"".join(roots))
 
 
-def fors_sign(msg: bytes, sk_seed: bytes, pk_seed: bytes, adrs: bytearray, k: int, a: int) -> tuple[list[bytes], list[list[bytes]]]:
+def fors_sign(
+    msg: bytes,
+    sk_seed: bytes,
+    pk_seed: bytes,
+    adrs: bytearray,
+    k: int,
+    a: int,
+) -> tuple[list[bytes], list[list[bytes]]]:
     idxs = _msg_to_indices(msg, k, a)
 
     sig_sk = []
@@ -123,7 +130,14 @@ def fors_sign(msg: bytes, sk_seed: bytes, pk_seed: bytes, adrs: bytearray, k: in
     return sig_sk, sig_auth
 
 
-def fors_sig_to_pk(sig: tuple[list[bytes], list[list[bytes]]], msg: bytes, pk_seed: bytes, adrs: bytearray, k: int, a: int) -> bytes:
+def fors_sig_to_pk(
+    sig: tuple[list[bytes], list[list[bytes]]],
+    msg: bytes,
+    pk_seed: bytes,
+    adrs: bytearray,
+    k: int,
+    a: int,
+) -> bytes:
     idxs = _msg_to_indices(msg, k, a)
 
     roots = []
@@ -159,5 +173,13 @@ def fors_sig_to_pk(sig: tuple[list[bytes], list[list[bytes]]], msg: bytes, pk_se
     return _tl(pk_seed, pk_adrs, b"".join(roots))
 
 
-def fors_verify(sig: tuple[list[bytes], list[list[bytes]]], msg: bytes, pk_seed: bytes, pk: bytes, adrs: bytearray, k: int, a: int) -> bool:
+def fors_verify(
+    sig: tuple[list[bytes], list[list[bytes]]],
+    msg: bytes,
+    pk_seed: bytes,
+    pk: bytes,
+    adrs: bytearray,
+    k: int,
+    a: int,
+) -> bool:
     return fors_sig_to_pk(sig, msg, pk_seed, adrs, k, a) == pk
