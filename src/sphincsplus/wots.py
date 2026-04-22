@@ -1,9 +1,10 @@
+# WOTS+ implementation
+# Reference - https://sphincs.org/data/sphincs+-round3-specification.pdf (pg. 13-18)
+
 import math
 
 from .adrs import *
 from .hash import *
-
-# reference - https://eprint.iacr.org/2017/965
 
 
 def log_w(w: int) -> int:
@@ -22,37 +23,28 @@ def get_len(n: int, w: int) -> int:
     return get_len_1(n, w) + get_len_2(n, w)
 
 
-def bytes_to_base_w(msg: bytes, w: int, out_len: int) -> list:
+def _base_w(msg: bytes, w: int, out_len: int) -> list:
+    assert w in {4, 16, 256}
+    assert out_len >= 0
+    assert out_len <= (8 * len(msg)) // log_w(w)
+
     out = []
-    bits = log_w(w)
-    bit_num, val, j = 0, 0, 0
+    bits, val, i = 0, 0, 0
 
     for _ in range(out_len):
-        while bit_num < bits and j < len(msg):
-            val = (val << 8) | msg[j]
-            bit_num += 8
-            j += 1
+        if bits == 0:
+            val = msg[i]
+            i += 1
+            bits += 8
 
-        if bit_num < bits:
-            val <<= (bits - bit_num)
-            bit_num = bits
+        bits -= log_w(w)
+        out.append((val >> bits) & (w - 1))
 
-        # print(bit_num)
-        # print(j)
-        # print()
-
-        shift = bit_num - bits
-        out.append((val >> shift) & (w - 1))
-
-        # print(shift)
-        # print(val)
-        # print("\n")
-
-        bit_num -= bits
-        val &= (1 << bit_num) - 1 if bit_num > 0 else 0
-
-        # print(out)
     return out
+
+
+def bytes_to_base_w(msg: bytes, w: int, out_len: int) -> list:
+    return _base_w(msg, w, out_len)
 
 
 def int_to_base_w(val: int, w: int, out_len: int) -> list:
