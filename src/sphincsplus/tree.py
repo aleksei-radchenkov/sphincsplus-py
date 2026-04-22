@@ -43,7 +43,7 @@ def hypertree_sign(
 
     root = merkle_sig_to_pk(sig, msg, pk_seed, adrs, leaf_idx, n, w)
 
-    curr_tree = tree_idx >> height
+    curr_tree = tree_idx
     curr_msg = root
 
     for i in range(1, d):

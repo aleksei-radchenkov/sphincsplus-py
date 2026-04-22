@@ -106,7 +106,15 @@ def wots_gen_pk(sk_seed: bytes, pk_seed: bytes, adrs: bytearray, n: int, w: int)
 
 def _checksum(msg_w: list, w: int, n: int) -> list:
     s = sum(w - 1 - i for i in msg_w)
-    return _int_to_base_w(s, w, _get_len_2(n, w))
+    len_2 = _get_len_2(n, w)
+
+    log_w = _log_w(w)
+    if (log_w % 8) != 0:
+        s = s << (8 - ((len_2 * log_w) % 8))
+
+    len_2_bytes = math.ceil((len_2 * log_w) / 8)
+    s_bytes = int(s).to_bytes(len_2_bytes, "big")
+    return _base_w(s_bytes, w, len_2)
 
 
 def wots_sign(msg: bytes, sk_seed: bytes, pk_seed: bytes, adrs: bytearray, n: int, w: int) -> list:
