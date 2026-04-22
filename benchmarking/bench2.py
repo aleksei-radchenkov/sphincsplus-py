@@ -34,7 +34,7 @@ test_cases = [
 ]
 
 for name, n, h, d, a, k, w, m in test_cases:
-    log("start")
+    log("start " + name)
     sk, pk = keygen(n, h, d, a, k, w, m)
     log("finished keygen")
     sig = sign(b"message", sk, n, h, d, a, k, w, m)
