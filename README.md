@@ -53,8 +53,11 @@ docker run --rm sphincsplus pytest tests/ -q
 ```
 
 ## Benchmarking
-_TODO_
-_I'll plan to use the pytest-benchmarking library_
+Execute the following command to perform benchmarking locally:
+```bash
+docker build -t sphincsplus .
+docker run --rm sphincsplus pytest --benchmark-only
+```
 
 
 
