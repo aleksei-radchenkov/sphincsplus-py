@@ -113,7 +113,7 @@ def test_sig_fixed(keypair_fixed):
     assert wots.verify(sig, fixed_msg, fixed_pk_seed, pk, adrs, n, w)
 
 
-@ pytest.mark.parametrize("keypair_random", [(16, 16), (24, 16), (32, 16)], indirect=True)
+@pytest.mark.parametrize("keypair_random", [(16, 16), (24, 16), (32, 16)], indirect=True)
 def test_chain_index_steps_too_low(keypair_random):
     adrs, _, _, pk_seed, n, w = keypair_random
     msg = secrets.token_bytes(n)
