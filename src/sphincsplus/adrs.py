@@ -75,7 +75,15 @@ def _get_chain(adrs: bytearray) -> int:
     return int.from_bytes(adrs[24:28], "big")
 
 
-def _get_hash_idx(adrs: bytearray) -> int:
+def _get_hash(adrs: bytearray) -> int:
+    return int.from_bytes(adrs[28:32], "big")
+
+
+def _get_tree_height(adrs: bytearray) -> int:
+    return int.from_bytes(adrs[24:28], "big")
+
+
+def _get_tree_idx(adrs: bytearray) -> int:
     return int.from_bytes(adrs[28:32], "big")
 
 
@@ -135,7 +143,3 @@ def _new_node_adrs(adrs: bytearray, addr_type: int, height: int, index: int) -> 
     _set_tree_idx(out, index)
 
     return out
-
-
-def _adrs_to_bytes(adrs: bytearray) -> bytes:
-    return bytes(adrs)

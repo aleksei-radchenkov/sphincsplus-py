@@ -19,7 +19,7 @@ from .adrs import (
 )
 
 from .hash import _h
-from . import wots
+from .wots import (wots_gen_pk, wots_sign, wots_sig_to_pk)
 
 
 def _get_leaf_pk(
@@ -35,9 +35,10 @@ def _get_leaf_pk(
     _set_type(leaf_adrs, TYPE_WOTS_HASH)
     _set_keypair(leaf_adrs, idx)
 
-    return wots.gen_pk(sk_seed, pk_seed, leaf_adrs, n, w)
+    return wots_gen_pk(sk_seed, pk_seed, leaf_adrs, n, w)
 
 
+# Ref - algo. 7 (4.1.3)
 def tree_hash(
     sk_seed: bytes,
     pk_seed: bytes,
@@ -72,6 +73,13 @@ def tree_hash(
     return stack.pop()[0]
 
 
+# Ref - algo. 8 (4.1.4)
+def merkle_pk_gen(sk_seed: bytes, pk_seed: bytes, adrs:  bytearray, height:
+                  int, n: int, w: int) -> bytes:
+    return tree_hash(sk_seed, pk_seed, adrs, 0, height, n, w)
+
+
+# Ref - algo. 9 (4.1.6)
 def merkle_sign(
     msg: bytes,
     sk_seed: bytes,
@@ -81,24 +89,27 @@ def merkle_sign(
     height: int,
     n: int,
     w: int,
-) -> tuple[list[bytes], list[bytes]]:
+) -> list[list[bytes]]:
     auth = []
+
     for j in range(height):
-        k = (idx // (1 << j)) ^ 1
-        auth.append(tree_hash(sk_seed, pk_seed, adrs, k * (1 << j), j, n, w))
+        start = ((idx // (1 << j)) ^ 1) * (1 << j)
+        auth.append(tree_hash(sk_seed, pk_seed, adrs, start, j, n, w))
 
     wots_adrs = bytearray(adrs)
+
     _set_type(wots_adrs, TYPE_WOTS_HASH)
     _set_keypair(wots_adrs, idx)
-    wots_sig = wots.sign(msg, sk_seed, pk_seed, wots_adrs, n, w)
 
-    return wots_sig, auth
+    sig = wots_sign(msg, sk_seed, pk_seed, wots_adrs, n, w)
+
+    return [sig, auth]
 
 
-def verify_root(
-    wots_sig: list,
+# Ref - algo. 10
+def merkle_sig_to_pk(
+    sig: list[list[bytes]],
     msg: bytes,
-    auth: list,
     pk_seed: bytes,
     adrs: bytearray,
     idx: int,
@@ -106,21 +117,39 @@ def verify_root(
     w: int,
 ) -> bytes:
     wots_adrs = bytearray(adrs)
+
     _set_type(wots_adrs, TYPE_WOTS_HASH)
     _set_keypair(wots_adrs, idx)
-    node = wots.sig_to_pk(wots_sig, msg, pk_seed, wots_adrs, n, w)
+
+    node = wots_sig_to_pk(sig[0], msg, pk_seed, wots_adrs, n, w)
 
     tree_adrs = bytearray(adrs)
+
     _set_type(tree_adrs, TYPE_TREE)
     _set_tree_idx(tree_adrs, idx)
 
-    for k, sibling in enumerate(auth):
+    for k, j in enumerate(sig[1]):
         _set_tree_height(tree_adrs, k + 1)
+
         if (idx // (1 << k)) % 2 == 0:
             _set_tree_idx(tree_adrs, _get_tree_idx(tree_adrs) // 2)
-            node = _h(pk_seed, tree_adrs, node, sibling)
+            node = _h(pk_seed, tree_adrs, node, j)
+
         else:
             _set_tree_idx(tree_adrs, (_get_tree_idx(tree_adrs) - 1) // 2)
-            node = _h(pk_seed, tree_adrs, sibling, node)
+            node = _h(pk_seed, tree_adrs, j, node)
 
     return node
+
+
+def merkle_verify(
+    sig: list[list[bytes]],
+    msg: bytes,
+    pk_seed: bytes,
+    pk: bytes,
+    adrs: bytearray,
+    idx: int,
+    n: int,
+    w: int,
+) -> bool:
+    return merkle_sig_to_pk(sig, msg, pk_seed, adrs, idx, n, w) == pk

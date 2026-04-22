@@ -78,7 +78,7 @@ def _gen_sk(sk_seed: bytes, adrs: bytearray, n: int, w: int) -> list:
     return out
 
 
-def gen_pk(sk_seed: bytes, pk_seed: bytes, adrs: bytearray, n: int, w: int) -> bytes:
+def wots_gen_pk(sk_seed: bytes, pk_seed: bytes, adrs: bytearray, n: int, w: int) -> bytes:
     pk_list = []
 
     pk_adrs = bytearray(adrs)
@@ -103,7 +103,7 @@ def _checksum(msg_w: list, w: int, n: int) -> list:
     return _int_to_base_w(s, w, _get_len_2(n, w))
 
 
-def sign(msg: bytes, sk_seed: bytes, pk_seed: bytes, adrs: bytearray, n: int, w: int) -> list:
+def wots_sign(msg: bytes, sk_seed: bytes, pk_seed: bytes, adrs: bytearray, n: int, w: int) -> list:
     msg_w = _base_w(msg, w, _get_len_1(n, w))
     csum = _checksum(msg_w, w, n)
     msg_c = msg_w + csum
@@ -123,7 +123,7 @@ def sign(msg: bytes, sk_seed: bytes, pk_seed: bytes, adrs: bytearray, n: int, w:
     return sig
 
 
-def sig_to_pk(sig: list, msg: bytes, pk_seed: bytes, adrs: bytearray, n: int, w: int) -> bytes:
+def wots_sig_to_pk(sig: list, msg: bytes, pk_seed: bytes, adrs: bytearray, n: int, w: int) -> bytes:
     msg_w = _base_w(msg, w, _get_len_1(n, w))
     csum = _checksum(msg_w, w, n)
     msg_c = msg_w + csum
@@ -147,5 +147,5 @@ def sig_to_pk(sig: list, msg: bytes, pk_seed: bytes, adrs: bytearray, n: int, w:
     return _tl(pk_seed, pk_adrs, b"".join(pk_list))
 
 
-def verify(sig: list, msg: bytes, pk_seed: bytes, pk: bytes, adrs: bytearray, n: int, w: int) -> bool:
-    return sig_to_pk(sig, msg, pk_seed, adrs, n, w) == pk
+def wots_verify(sig: list, msg: bytes, pk_seed: bytes, pk: bytes, adrs: bytearray, n: int, w: int) -> bool:
+    return wots_sig_to_pk(sig, msg, pk_seed, adrs, n, w) == pk
