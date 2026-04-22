@@ -1,17 +1,34 @@
+# Reference - https://sphincs.org/data/sphincs+-round3-specification.pdf
+# pg. 15-25
+#
+# Tree Parameters:
+#
+# h - the height of the tree (lvl nums)
+# n - the length of messages/nodes in bytes
+# w - WOTS constant
+
 from .adrs import (
     TYPE_TREE,
     TYPE_WOTS_HASH,
-    _adrs_to_bytes,
-    _new_node_adrs,
+    _get_tree_idx,
+    _get_tree_height,
     _set_keypair,
     _set_type,
+    _set_tree_height,
+    _set_tree_idx,
 )
+
 from .hash import _h
 from . import wots
 
 
-def get_leaf_pk(
-    sk_seed: bytes, pk_seed: bytes, adrs: bytearray, idx: int, n: int, w: int
+def _get_leaf_pk(
+    sk_seed: bytes,
+    pk_seed: bytes,
+    adrs: bytearray,
+    idx: int,
+    n: int,
+    w: int
 ) -> bytes:
     leaf_adrs = bytearray(adrs)
 
@@ -21,79 +38,7 @@ def get_leaf_pk(
     return wots.gen_pk(sk_seed, pk_seed, leaf_adrs, n, w)
 
 
-def get_root(
-    pk_seed: bytes,
-    adrs: bytearray,
-    leafs: list,
-    adrs_type: int,
-    start: int = 0,
-) -> bytes:
-    tree = list(leafs)
-    base = bytearray(adrs)
-
-    for i in range(1, len(leafs).bit_length()):
-        parents = []
-
-        for j in range(0, len(tree), 2):
-            node_adrs = _new_node_adrs(
-                base, adrs_type, i, (start >> i) + j // 2)
-            parent = _h(pk_seed, _adrs_to_bytes(
-                node_adrs), tree[j], tree[j + 1])
-            parents.append(parent)
-
-        tree = parents
-    return tree[0]
-
-
-def get_root_path(
-    pk_seed: bytes,
-    adrs: bytearray,
-    leafs: list,
-    idx: int,
-    adrs_type: int,
-) -> tuple[bytes, list[bytes]]:
-    auth = []
-    layer = list(leafs)
-    height = len(leafs).bit_length() - 1
-    j = idx
-
-    for i in range(1, height + 1):
-        auth.append(layer[j ^ 1])
-        j //= 2
-
-        layer = [
-            _h(pk_seed, _adrs_to_bytes(_new_node_adrs(
-                adrs, adrs_type, i, m // 2)), layer[m], layer[m + 1])
-            for m in range(0, len(layer), 2)
-        ]
-
-    return layer[0], auth
-
-
-def root_from_path(
-    leaf: bytes,
-    idx: int,
-    auth: list,
-    pk_seed: bytes,
-    adrs: bytearray,
-    adrs_type: int,
-) -> bytes:
-    node = leaf
-    j = idx
-
-    for i, sibling in enumerate(auth, start=1):
-        adrs = _new_node_adrs(adrs, adrs_type, i, j // 2)
-
-        if (j & 1) == 0:
-            node = _h(pk_seed, _adrs_to_bytes(adrs), node, sibling)
-        else:
-            node = _h(pk_seed, _adrs_to_bytes(adrs), sibling, node)
-
-        j //= 2
-    return node
-
-
-def get_layer_root(
+def tree_hash(
     sk_seed: bytes,
     pk_seed: bytes,
     adrs: bytearray,
@@ -102,29 +47,29 @@ def get_layer_root(
     n: int,
     w: int,
 ) -> bytes:
-    leafs = [
-        get_leaf_pk(sk_seed, pk_seed, adrs, start_idx + i, n, w)
-        for i in range(1 << height)
-    ]
+    assert start_idx % (1 << height) == 0
 
-    return get_root(pk_seed, adrs, leafs, TYPE_TREE, start_idx)
+    stack = []
 
+    for i in range(1 << height):
+        node = _get_leaf_pk(sk_seed, pk_seed, adrs, start_idx + i, n, w)
 
-def get_merkle_path(
-    sk_seed: bytes,
-    pk_seed: bytes,
-    adrs: bytearray,
-    idx: int,
-    height: int,
-    n: int,
-    w: int,
-) -> tuple[bytes, list[bytes]]:
-    leafs = [
-        get_leaf_pk(sk_seed, pk_seed, adrs, i, n, w)
-        for i in range(1 << height)
-    ]
+        tree_adrs = bytearray(adrs)
+        _set_type(tree_adrs, TYPE_TREE)
+        _set_tree_height(tree_adrs, 1)
+        _set_tree_idx(tree_adrs, start_idx + i)
 
-    return get_root_path(pk_seed, adrs, leafs, idx, TYPE_TREE)
+        node_height = 0
+
+        while stack and stack[-1][1] == node_height:
+            _set_tree_idx(tree_adrs, (_get_tree_idx(tree_adrs) - 1) // 2)
+            node = _h(pk_seed, tree_adrs, stack.pop()[0], node)
+            _set_tree_height(tree_adrs, _get_tree_height(tree_adrs) + 1)
+            node_height += 1
+
+        stack.append([node, node_height])
+
+    return stack.pop()[0]
 
 
 def merkle_sign(
@@ -137,16 +82,20 @@ def merkle_sign(
     n: int,
     w: int,
 ) -> tuple[list[bytes], list[bytes]]:
-    wots_adrs = bytearray(adrs)
-    _set_keypair(wots_adrs, idx)
+    auth = []
+    for j in range(height):
+        k = (idx // (1 << j)) ^ 1
+        auth.append(tree_hash(sk_seed, pk_seed, adrs, k * (1 << j), j, n, w))
 
+    wots_adrs = bytearray(adrs)
+    _set_type(wots_adrs, TYPE_WOTS_HASH)
+    _set_keypair(wots_adrs, idx)
     wots_sig = wots.sign(msg, sk_seed, pk_seed, wots_adrs, n, w)
-    _, auth = get_merkle_path(sk_seed, pk_seed, adrs, idx, height, n, w)
 
     return wots_sig, auth
 
 
-def merkle_verify_root(
+def verify_root(
     wots_sig: list,
     msg: bytes,
     auth: list,
@@ -156,16 +105,22 @@ def merkle_verify_root(
     n: int,
     w: int,
 ) -> bytes:
-    leaf_pk = wots.sig_to_pk(wots_sig, msg, pk_seed, adrs, n, w)
+    wots_adrs = bytearray(adrs)
+    _set_type(wots_adrs, TYPE_WOTS_HASH)
+    _set_keypair(wots_adrs, idx)
+    node = wots.sig_to_pk(wots_sig, msg, pk_seed, wots_adrs, n, w)
 
-    return root_from_path(leaf_pk, idx, auth, pk_seed, adrs, TYPE_TREE)
+    tree_adrs = bytearray(adrs)
+    _set_type(tree_adrs, TYPE_TREE)
+    _set_tree_idx(tree_adrs, idx)
 
+    for k, sibling in enumerate(auth):
+        _set_tree_height(tree_adrs, k + 1)
+        if (idx // (1 << k)) % 2 == 0:
+            _set_tree_idx(tree_adrs, _get_tree_idx(tree_adrs) // 2)
+            node = _h(pk_seed, tree_adrs, node, sibling)
+        else:
+            _set_tree_idx(tree_adrs, (_get_tree_idx(tree_adrs) - 1) // 2)
+            node = _h(pk_seed, tree_adrs, sibling, node)
 
-def tree_hash(sk_seed: bytes, pk_seed: bytes, adrs: bytearray, start_idx: int,
-              height: int, n: int, w: int) -> bytes:
-    leafs = [
-        get_leaf_pk(sk_seed, pk_seed, adrs, start_idx + i, n, w)
-        for i in range(1 << height)
-    ]
-
-    return get_root(pk_seed, adrs, leafs, TYPE_TREE, start_idx)
+    return node
