@@ -3,6 +3,7 @@ from sphincsplus import keygen, sign, verify
 from typing import NamedTuple
 import random
 
+
 class TestCase(NamedTuple):
     name: str
     n: int
@@ -13,6 +14,8 @@ class TestCase(NamedTuple):
     w: int
     m: int
 
+
+# these m values are wrong - maybe look here https://nvlpubs.nist.gov/nistpubs/fips/nist.fips.205.pdf
 test_cases = [
     TestCase("low security demo", 16, 8, 2, 4, 4, 16, 24),
     TestCase("SPHINCS+-128s", 16, 63, 7, 12, 14, 16, 133),
