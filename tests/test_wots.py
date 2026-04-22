@@ -10,7 +10,7 @@ sk_seed = secrets.token_bytes(n)
 pk_seed = secrets.token_bytes(n)
 msg = secrets.token_bytes(n)
 fixed_msg = b"A"*n
-fixed_sk_seed = b"\x01"*n 
+fixed_sk_seed = b"\x01"*n
 fixed_pk_seed = b"\x02"*n
 
 
@@ -19,6 +19,7 @@ def keypair_random():
     out = adrs.new_hash_adrs(0, 0, 0, 0, 0)
 
     return out, wots.gen_pk(sk_seed, pk_seed, out, n, w)
+
 
 @pytest.fixture
 def keypair_fixed():
@@ -86,14 +87,16 @@ def test_pk_from_sig_matches_pk(keypair_random):
 
     assert wots.sig_to_pk(sig, msg, pk_seed, adrs, n, w) == pk
 
+
 def test_sig_fixed(keypair_fixed):
     adrs, pk = keypair_fixed
     sig = wots.sign(fixed_msg, fixed_sk_seed, fixed_pk_seed, adrs, n, w)
-    with open("./tests/expected_outputs/fixed_wots_signature.txt", "rb") as f: 
+    with open("./tests/expected_outputs/fixed_wots_signature.txt", "rb") as f:
         fixed_sig = f.read()
 
     assert fixed_sig == b''.join(sig)
     assert wots.verify(sig, fixed_msg, fixed_pk_seed, pk, adrs, n, w)
+
 
 def test_chain_index_steps_too_low(keypair_random):
     adrs, pk = keypair_random
