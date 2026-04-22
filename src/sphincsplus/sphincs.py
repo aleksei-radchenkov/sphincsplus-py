@@ -86,8 +86,9 @@ def sign(
     adrs.set_tree(fors_adrs, tree_idx)
     adrs.set_keypair(fors_adrs, leaf_idx)
 
-    sig_leafs, sig_auth = fors.sign(msg_chunk, sk_seed, pk_seed, fors_adrs, k, a, n)
-    fors_pk = fors.gen_pk(sk_seed, pk_seed, fors_adrs, k, a, n)
+    fors_cache = {}
+    sig_leafs, sig_auth = fors.sign(msg_chunk, sk_seed, pk_seed, fors_adrs, k, a, n, cache=fors_cache)
+    fors_pk = fors.gen_pk(sk_seed, pk_seed, fors_adrs, k, a, n, cache=fors_cache)
 
     ht_sig = tree.hypertree_sign(
         fors_pk, sk_seed, pk_seed, tree_idx, leaf_idx, h, d, n, w)
