@@ -25,7 +25,7 @@ class TestCase(NamedTuple):
 
 test_cases = [
     TestCase("demo", 16, 8, 2, 4, 4, 16, 24),
-    # TestCase("SPHINCS+-128s", 16, 63, 7, 12, 14, 16, 133),
+    TestCase("SPHINCS+-128s", 16, 63, 7, 12, 14, 16, 133),
     # TestCase("SPHINCS+-128f", 16, 66, 22, 6, 33, 16, 128),
     # TestCase("SPHINCS+-192s", 24, 63, 7, 14, 17, 16, 193),
     # TestCase("SPHINCS+-192f", 24, 66, 22, 8, 33, 16, 194),
@@ -34,17 +34,13 @@ test_cases = [
 ]
 
 for name, n, h, d, a, k, w, m in test_cases:
-    log(f"start preparring {name}")
     sk, pk = keygen(n, h, d, a, k, w, m)
     sig = sign(b"message", sk, n, h, d, a, k, w, m)
     # print(verify(b"message", sig, pk, n, h, d, a, k, w, m))
 
-    log(f"start benchmarking {name}")
-    runner.bench_func(name + "_keygen", keygen, n, h, d, a, k, w, m)
+    runner.bench_func(name + "_keygen", keygen, n, h, d, a, k, w, m, )
     # runner.bench_func(name + "_sign", sign, b"message", sk, n, h, d, a, k, w, m)
     # runner.bench_func(name + "_verify", verify, b"message", sig, pk, n, h, d, a, k, w, m)
-
-    log(f"finish benchmarking {name}")
 
 # runner.timeit(name="sort a sorted list",
             #   stmt="sorted(s, key=f)",
