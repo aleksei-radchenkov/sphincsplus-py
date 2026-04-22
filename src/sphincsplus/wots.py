@@ -1,10 +1,9 @@
-# WOTS+ implementation
-# Reference - https://sphincs.org/data/sphincs+-round3-specification.pdf (pg. 13-18)
-
 import math
 
-from .adrs import *
-from .hash import *
+from .adrs import _set_hash, _set_chain, _set_type, _set_keypair, _get_keypair
+from .adrs import TYPE_WOTS_PK
+
+from .hash import _f, _prf, _tl
 
 
 def log_w(w: int) -> int:
@@ -25,8 +24,7 @@ def get_len(n: int, w: int) -> int:
 
 def _base_w(msg: bytes, w: int, out_len: int) -> list:
     assert w in {4, 16, 256}
-    assert out_len >= 0
-    assert out_len <= (8 * len(msg)) // log_w(w)
+    assert out_len >= 0 and out_len <= (8 * len(msg)) // log_w(w)
 
     out = []
     bits, val, i = 0, 0, 0
@@ -43,107 +41,111 @@ def _base_w(msg: bytes, w: int, out_len: int) -> list:
     return out
 
 
-def bytes_to_base_w(msg: bytes, w: int, out_len: int) -> list:
-    return _base_w(msg, w, out_len)
-
-
-def int_to_base_w(val: int, w: int, out_len: int) -> list:
+def int_to_base_w(inp: int, w: int, out_len: int) -> list:
     out = []
-    bits = log_w(w)
-
     for i in range(out_len):
-        shift = bits * (out_len - i - 1)
-        out.append((val >> shift) & (w - 1))
-
+        bits = log_w(w) * (out_len - i - 1)
+        out.append((inp >> bits) & (w - 1))
     return out
 
 
-def checksum(msg_base_w: list, w: int, n: int) -> list:
-    s = sum(w - 1 - digit for digit in msg_base_w)
+def chain(msg: bytes, start: int, steps: int, pk_seed: bytes, adrs: bytearray, w: int) -> bytes:
+    if steps == 0:
+        return msg
 
-    return int_to_base_w(s, w, get_len_2(n, w))
+    assert (start + steps) <= (w - 1)
 
+    x = msg
 
-def chain(inp: bytes, start: int, steps: int,
-          pk_seed: bytes, layer: int, tree: int, keypair: int, chain_idx: int) -> bytes:
-    out = inp
+    for j in range(steps):
+        new_adrs = bytearray(adrs)
+        _set_hash(new_adrs, start + j)
+        x = _f(pk_seed, new_adrs, x)
 
-    for i in range(start, start + steps):
-        adrs = new_hash_adrs(layer, tree, keypair, chain_idx, i)
-        out = f(pk_seed, adrs_to_bytes(adrs), out)
-
-    return out
+    return x
 
 
 def gen_sk(sk_seed: bytes, adrs: bytearray, n: int, w: int) -> list:
-    return [
-        prf(sk_seed,
-            adrs_to_bytes(new_hash_adrs(get_layer(adrs),
-                                        get_tree(adrs),
-                                        get_keypair(adrs), i, 0)))
+    out = []
+    for i in range(get_len(n, w)):
+        new_adrs = bytearray(adrs)
 
-        for i in range(get_len(n, w))
-    ]
+        _set_chain(new_adrs, i)
+        _set_hash(new_adrs, 0)
+
+        out.append(_prf(sk_seed, new_adrs))
+
+    return out
 
 
 def gen_pk(sk_seed: bytes, pk_seed: bytes, adrs: bytearray, n: int, w: int) -> bytes:
-    sk = gen_sk(sk_seed, adrs, n, w)
+    pk_list = []
 
-    pk_list = [
-        chain(sk[i], 0, w - 1,
-              pk_seed, get_layer(adrs),
-              get_tree(adrs), get_keypair(adrs), i)
-
-        for i in range(get_len(n, w))
-    ]
-
-    return th(pk_seed,
-              adrs_to_bytes(new_pk_adrs(get_layer(adrs),
-                                        get_tree(adrs),
-                                        get_keypair(adrs))), b"".join(pk_list))
-
-
-def sign(msg: bytes, sk_seed: bytes, pk_seed: bytes,
-         adrs: bytearray, n: int, w: int) -> list:
-    sk = gen_sk(sk_seed, adrs, n, w)
-
-    msg_w = bytes_to_base_w(msg, w, get_len_1(n, w))
-    val = msg_w + checksum(msg_w, w, n)
-
-    return [
-        chain(sk[i], 0, val[i], pk_seed, get_layer(adrs), get_tree(adrs),
-              get_keypair(adrs), i)
-
-        for i in range(get_len(n, w))
-    ]
-
-
-def sig_to_pk(sig: list, msg: bytes, pk_seed: bytes,
-              adrs: bytearray, n: int, w: int) -> bytes:
-    msg_w = bytes_to_base_w(msg, w, get_len_1(n, w))
-    val = msg_w + checksum(msg_w, w, n)
-
-    pk = []
+    pk_adrs = bytearray(adrs)
 
     for i in range(get_len(n, w)):
+        new_adrs = bytearray(adrs)
 
-        pk.append(chain(
-            sig[i],
-            val[i],
-            w - 1 - val[i],
-            pk_seed,
-            get_layer(adrs),
-            get_tree(adrs),
-            get_keypair(adrs),
-            i,
-        ))
+        _set_chain(new_adrs, i)
+        _set_hash(new_adrs, 0)
 
-    return th(pk_seed,
-              adrs_to_bytes(
-                  new_pk_adrs(get_layer(adrs),
-                              get_tree(adrs), get_keypair(adrs))), b"".join(pk))
+        sk = _prf(sk_seed, new_adrs)
+        pk_list.append(chain(sk, 0, w - 1, pk_seed, new_adrs, w))
+
+    _set_type(pk_adrs, TYPE_WOTS_PK)
+    _set_keypair(pk_adrs, _get_keypair(adrs))
+
+    return _tl(pk_seed, pk_adrs, b"".join(pk_list))
 
 
-def verify(sig: list, msg: bytes, pk_seed: bytes,
-           pk: bytes, adrs: bytearray, n: int, w: int) -> bool:
+def _checksum(msg_w: list, w: int, n: int) -> list:
+    s = sum(w - 1 - i for i in msg_w)
+    return int_to_base_w(s, w, get_len_2(n, w))
+
+
+def sign(msg: bytes, sk_seed: bytes, pk_seed: bytes, adrs: bytearray, n: int, w: int) -> list:
+    msg_w = _base_w(msg, w, get_len_1(n, w))
+    csum = _checksum(msg_w, w, n)
+    msg_c = msg_w + csum
+
+    sig = []
+    length = get_len(n, w)
+
+    for i in range(length):
+        new_adrs = bytearray(adrs)
+
+        _set_chain(new_adrs, i)
+        _set_hash(new_adrs, 0)
+
+        sk = _prf(sk_seed, new_adrs)
+        sig.append(chain(sk, 0, msg_c[i], pk_seed, new_adrs, w))
+
+    return sig
+
+
+def sig_to_pk(sig: list, msg: bytes, pk_seed: bytes, adrs: bytearray, n: int, w: int) -> bytes:
+    msg_w = _base_w(msg, w, get_len_1(n, w))
+    csum = _checksum(msg_w, w, n)
+    msg_c = msg_w + csum
+
+    pk_list = []
+    pk_adrs = bytearray(adrs)
+
+    for i in range(get_len(n, w)):
+        new_adrs = bytearray(adrs)
+
+        _set_chain(new_adrs, i)
+        _set_hash(new_adrs, 0)
+
+        pk_list.append(
+            chain(sig[i], 0, w - 1 - msg_c[i], pk_seed, new_adrs, w)
+        )
+
+    _set_type(pk_adrs, TYPE_WOTS_PK)
+    _set_keypair(pk_adrs, _get_keypair(adrs))
+
+    return _tl(pk_seed, pk_adrs, b"".join(pk_list))
+
+
+def verify(sig: list, msg: bytes, pk_seed: bytes, pk: bytes, adrs: bytearray, n: int, w: int) -> bool:
     return sig_to_pk(sig, msg, pk_seed, adrs, n, w) == pk
