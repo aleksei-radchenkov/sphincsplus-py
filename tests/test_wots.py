@@ -13,7 +13,7 @@ msg = secrets.token_bytes(n)
 
 @pytest.fixture
 def keypair():
-    out = adrs.new_hash_adrs(0, 0, 0, 0, 0)
+    out = adrs._new_hash_adrs(0, 0, 0, 0, 0)
 
     return out, wots.gen_pk(sk_seed, pk_seed, out, n, w)
 
@@ -64,9 +64,9 @@ def test_different_msgs_give_different_sigs(keypair):
 
 def test_different_keypairs_give_different_pks():
     pk0 = wots.gen_pk(sk_seed, pk_seed,
-                      adrs.new_hash_adrs(0, 0, 0, 0, 0), n, w)
+                      adrs._new_hash_adrs(0, 0, 0, 0, 0), n, w)
     pk1 = wots.gen_pk(sk_seed, pk_seed,
-                      adrs.new_hash_adrs(0, 0, 1, 0, 0), n, w)
+                      adrs._new_hash_adrs(0, 0, 1, 0, 0), n, w)
 
     assert pk0 != pk1
 

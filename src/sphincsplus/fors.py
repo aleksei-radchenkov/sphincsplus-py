@@ -1,5 +1,13 @@
-from .adrs import *
-from .hash import *
+from .adrs import (
+    TYPE_FORS_ROOTS,
+    TYPE_FORS_TREE,
+    _adrs_to_bytes,
+    _set_keypair,
+    _set_tree_height,
+    _set_tree_idx,
+    _set_type,
+)
+from .hash import _f, _prf, _tl
 from .merkle import *
 
 
@@ -26,20 +34,20 @@ def msg_to_indices(msg_chunk: bytes, k: int, a: int) -> list:
 
 def fors_leaf(sk_seed: bytes, pk_seed: bytes,
               adrs: bytearray, tree_idx: int, leaf_idx: int, n: int) -> bytes:
-    sk_adrs = copy_adrs(adrs)
-    set_type(sk_adrs, TYPE_FORS_PRF)
-    set_keypair(sk_adrs, tree_idx)
-    set_tree_height(sk_adrs, 0)
-    set_tree_index(sk_adrs, leaf_idx)
-    sk_val = prf(sk_seed, adrs_to_bytes(sk_adrs))
+    sk_adrs = bytearray(adrs)
+    _set_type(sk_adrs, TYPE_FORS_TREE)
+    _set_keypair(sk_adrs, tree_idx)
+    _set_tree_height(sk_adrs, 0)
+    _set_tree_idx(sk_adrs, leaf_idx)
+    sk_val = _prf(sk_seed, sk_adrs)
 
-    leaf_adrs = copy_adrs(adrs)
-    set_type(leaf_adrs, TYPE_FORS_TREE)
-    set_keypair(leaf_adrs, tree_idx)
-    set_tree_height(leaf_adrs, 0)
-    set_tree_index(leaf_adrs, leaf_idx)
+    leaf_adrs = bytearray(adrs)
+    _set_type(leaf_adrs, TYPE_FORS_TREE)
+    _set_keypair(leaf_adrs, tree_idx)
+    _set_tree_height(leaf_adrs, 0)
+    _set_tree_idx(leaf_adrs, leaf_idx)
 
-    return f(pk_seed, adrs_to_bytes(leaf_adrs), sk_val)
+    return _f(pk_seed, leaf_adrs, sk_val)
 
 
 def fors_leafs(sk_seed: bytes, pk_seed: bytes,
@@ -60,12 +68,12 @@ def sign(msg_chunk: bytes, sk_seed: bytes, pk_seed: bytes,
         idx = indices[tree_idx]
         leafs = fors_leafs(sk_seed, pk_seed, adrs, tree_idx, a, n)
 
-        sk_adrs = copy_adrs(adrs)
-        set_type(sk_adrs, TYPE_FORS_PRF)
-        set_keypair(sk_adrs, tree_idx)
-        set_tree_height(sk_adrs, 0)
-        set_tree_index(sk_adrs, idx)
-        sig_leafs.append(prf(sk_seed, adrs_to_bytes(sk_adrs)))
+        sk_adrs = bytearray(adrs)
+        _set_type(sk_adrs, TYPE_FORS_TREE)
+        _set_keypair(sk_adrs, tree_idx)
+        _set_tree_height(sk_adrs, 0)
+        _set_tree_idx(sk_adrs, idx)
+        sig_leafs.append(_prf(sk_seed, sk_adrs))
 
         _, auth = get_root_path(pk_seed, adrs, leafs, idx, TYPE_FORS_TREE)
         sig_auth_paths.append(auth)
@@ -79,21 +87,21 @@ def pk_from_sig(sig_leafs: list, sig_auth: list, indices: list,
     for tree_idx in range(k):
         idx = indices[tree_idx]
 
-        leaf_adrs = copy_adrs(adrs)
-        set_type(leaf_adrs, TYPE_FORS_TREE)
-        set_keypair(leaf_adrs, tree_idx)
-        set_tree_height(leaf_adrs, 0)
-        set_tree_index(leaf_adrs, idx)
-        leaf = f(pk_seed, adrs_to_bytes(leaf_adrs), sig_leafs[tree_idx])
+        leaf_adrs = bytearray(adrs)
+        _set_type(leaf_adrs, TYPE_FORS_TREE)
+        _set_keypair(leaf_adrs, tree_idx)
+        _set_tree_height(leaf_adrs, 0)
+        _set_tree_idx(leaf_adrs, idx)
+        leaf = _f(pk_seed, leaf_adrs, sig_leafs[tree_idx])
 
         root = root_from_path(leaf, idx, sig_auth[tree_idx],
                               pk_seed, adrs, TYPE_FORS_TREE)
         roots.append(root)
 
-    pk_adrs = copy_adrs(adrs)
-    set_type(pk_adrs, TYPE_FORS_ROOTS)
+    pk_adrs = bytearray(adrs)
+    _set_type(pk_adrs, TYPE_FORS_ROOTS)
 
-    return th(pk_seed, adrs_to_bytes(pk_adrs), b"".join(roots))
+    return _tl(pk_seed, pk_adrs, b"".join(roots))
 
 
 def gen_pk(sk_seed: bytes, pk_seed: bytes,
@@ -107,12 +115,12 @@ def gen_pk(sk_seed: bytes, pk_seed: bytes,
         root = get_root(pk_seed, adrs, leafs, TYPE_FORS_TREE)
         roots.append(root)
 
-    pk_adrs = copy_adrs(adrs)
-    set_type(pk_adrs, TYPE_FORS_ROOTS)
+    pk_adrs = bytearray(adrs)
+    _set_type(pk_adrs, TYPE_FORS_ROOTS)
 
     # print(pk);
 
-    return th(pk_seed, adrs_to_bytes(pk_adrs), b"".join(roots))
+    return _tl(pk_seed, pk_adrs, b"".join(roots))
 
 
 def verify(sig_leafs: list, sig_auth: list, msg_chunk: bytes,

@@ -13,10 +13,10 @@ msg_len = math.ceil((k * a) / 8)
 sk_seed = secrets.token_bytes(n)
 pk_seed = secrets.token_bytes(n)
 
-addr = adrs.new()
-adrs.set_layer(addr, 0)
-adrs.set_tree(addr, 0)
-adrs.set_keypair(addr, 0)
+addr = adrs._new()
+adrs._set_layer(addr, 0)
+adrs._set_tree(addr, 0)
+adrs._set_keypair(addr, 0)
 
 
 @pytest.fixture

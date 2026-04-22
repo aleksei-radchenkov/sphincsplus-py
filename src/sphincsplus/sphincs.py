@@ -1,10 +1,10 @@
 import secrets
 
 from . import adrs
-from . import hash
 from . import fors
 from . import tree
 from . import wots
+from .hash import _h_msg, _prf_msg
 
 
 def digest_to_fors_and_idx(digest: bytes, m: int, k: int, a: int, h: int) -> tuple:
@@ -76,15 +76,15 @@ def sign(
     else:
         opt_rand = bytes(n)
 
-    r = hash.prf_msg(sk_prf, opt_rand, msg)
-    digest = hash.h_msg(r, pk_seed, pk_root, msg, m)
+    r = _prf_msg(sk_prf, opt_rand, msg)
+    digest = _h_msg(r, pk_seed, pk_root, msg, m)
     msg_chunk, idx = digest_to_fors_and_idx(digest, m, k, a, h)
     tree_idx, leaf_idx = idx_to_tree_leaf(idx, h, d)
 
-    fors_adrs = adrs.new()
-    adrs.set_layer(fors_adrs, 0)
-    adrs.set_tree(fors_adrs, tree_idx)
-    adrs.set_keypair(fors_adrs, leaf_idx)
+    fors_adrs = adrs._new()
+    adrs._set_layer(fors_adrs, 0)
+    adrs._set_tree(fors_adrs, tree_idx)
+    adrs._set_keypair(fors_adrs, leaf_idx)
 
     sig_leafs, sig_auth = fors.sign(msg_chunk, sk_seed, pk_seed, fors_adrs, k, a, n)
     fors_pk = fors.gen_pk(sk_seed, pk_seed, fors_adrs, k, a, n)
@@ -136,7 +136,7 @@ def verify(
     r = sig[0:n]
     body = sig[n:]
 
-    digest = hash.h_msg(r, pk_seed, pk_root, msg, m)
+    digest = _h_msg(r, pk_seed, pk_root, msg, m)
     msg_chunk, idx = digest_to_fors_and_idx(digest, m, k, a, h)
     tree_idx, leaf_idx = idx_to_tree_leaf(idx, h, d)
 
@@ -201,10 +201,10 @@ def verify(
     if ht_buf[o:]:
         return False
 
-    fors_adrs = adrs.new()
-    adrs.set_layer(fors_adrs, 0)
-    adrs.set_tree(fors_adrs, tree_idx)
-    adrs.set_keypair(fors_adrs, leaf_idx)
+    fors_adrs = adrs._new()
+    adrs._set_layer(fors_adrs, 0)
+    adrs._set_tree(fors_adrs, tree_idx)
+    adrs._set_keypair(fors_adrs, leaf_idx)
 
     indices = fors.msg_to_indices(msg_chunk, k, a)
     fors_pk = fors.pk_from_sig(

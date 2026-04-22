@@ -1,15 +1,22 @@
-from .adrs import *
-from .hash import *
+from .adrs import (
+    TYPE_TREE,
+    TYPE_WOTS_HASH,
+    _adrs_to_bytes,
+    _new_node_adrs,
+    _set_keypair,
+    _set_type,
+)
+from .hash import _h
 from . import wots
 
 
 def get_leaf_pk(
     sk_seed: bytes, pk_seed: bytes, adrs: bytearray, idx: int, n: int, w: int
 ) -> bytes:
-    leaf_adrs = copy_adrs(adrs)
+    leaf_adrs = bytearray(adrs)
 
-    set_type(leaf_adrs, TYPE_WOTS_HASH)
-    set_keypair(leaf_adrs, idx)
+    _set_type(leaf_adrs, TYPE_WOTS_HASH)
+    _set_keypair(leaf_adrs, idx)
 
     return wots.gen_pk(sk_seed, pk_seed, leaf_adrs, n, w)
 
@@ -22,16 +29,16 @@ def get_root(
     start: int = 0,
 ) -> bytes:
     tree = list(leafs)
-    base = copy_adrs(adrs)
+    base = bytearray(adrs)
 
     for i in range(1, len(leafs).bit_length()):
         parents = []
 
         for j in range(0, len(tree), 2):
-            node_adrs = new_node_adrs(
+            node_adrs = _new_node_adrs(
                 base, adrs_type, i, (start >> i) + j // 2)
-            parent = h(pk_seed, adrs_to_bytes(
-                node_adrs), tree[j] + tree[j + 1])
+            parent = _h(pk_seed, _adrs_to_bytes(
+                node_adrs), tree[j], tree[j + 1])
             parents.append(parent)
 
         tree = parents
@@ -55,8 +62,8 @@ def get_root_path(
         j //= 2
 
         layer = [
-            h(pk_seed, adrs_to_bytes(new_node_adrs(
-                adrs, adrs_type, i, m // 2)), layer[m] + layer[m + 1])
+            _h(pk_seed, _adrs_to_bytes(_new_node_adrs(
+                adrs, adrs_type, i, m // 2)), layer[m], layer[m + 1])
             for m in range(0, len(layer), 2)
         ]
 
@@ -75,12 +82,12 @@ def root_from_path(
     j = idx
 
     for i, sibling in enumerate(auth, start=1):
-        adrs = new_node_adrs(adrs, adrs_type, i, j // 2)
+        adrs = _new_node_adrs(adrs, adrs_type, i, j // 2)
 
         if (j & 1) == 0:
-            node = h(pk_seed, adrs_to_bytes(adrs), node + sibling)
+            node = _h(pk_seed, _adrs_to_bytes(adrs), node, sibling)
         else:
-            node = h(pk_seed, adrs_to_bytes(adrs), sibling + node)
+            node = _h(pk_seed, _adrs_to_bytes(adrs), sibling, node)
 
         j //= 2
     return node
@@ -130,8 +137,8 @@ def merkle_sign(
     n: int,
     w: int,
 ) -> tuple[list[bytes], list[bytes]]:
-    wots_adrs = copy_adrs(adrs)
-    set_keypair(wots_adrs, idx)
+    wots_adrs = bytearray(adrs)
+    _set_keypair(wots_adrs, idx)
 
     wots_sig = wots.sign(msg, sk_seed, pk_seed, wots_adrs, n, w)
     _, auth = get_merkle_path(sk_seed, pk_seed, adrs, idx, height, n, w)

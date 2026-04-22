@@ -138,7 +138,7 @@ def sig_to_pk(sig: list, msg: bytes, pk_seed: bytes, adrs: bytearray, n: int, w:
         _set_hash(new_adrs, 0)
 
         pk_list.append(
-            _chain(sig[i], 0, w - 1 - msg_c[i], pk_seed, new_adrs, w)
+            _chain(sig[i], msg_c[i], w - 1 - msg_c[i], pk_seed, new_adrs, w)
         )
 
     _set_type(pk_adrs, TYPE_WOTS_PK)

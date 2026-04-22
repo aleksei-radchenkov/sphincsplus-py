@@ -1,4 +1,4 @@
-from .adrs import *
+from .adrs import _new, _set_keypair, _set_layer, _set_tree
 from .merkle import *
 
 
@@ -21,16 +21,16 @@ def hypertree_sign(
     curr_leaf = leaf_idx
 
     for i in range(d):
-        adrs = new()
-        set_layer(adrs, i)
-        set_tree(adrs, curr_tree)
+        adrs = _new()
+        _set_layer(adrs, i)
+        _set_tree(adrs, curr_tree)
 
         wots_sig, path = merkle_sign(
             curr_msg, sk_seed, pk_seed, adrs, curr_leaf, height, n, w)
         ht_sig.append((wots_sig, path))
 
-        wots_adrs = copy_adrs(adrs)
-        set_keypair(wots_adrs, curr_leaf)
+        wots_adrs = bytearray(adrs)
+        _set_keypair(wots_adrs, curr_leaf)
         curr_msg = merkle_verify_root(
             wots_sig, curr_msg, path, pk_seed, wots_adrs, curr_leaf, n, w)
         curr_leaf = curr_tree & ((1 << height) - 1)
@@ -60,12 +60,12 @@ def hypertree_verify(
     for i in range(d):
         wots_sig, path = ht_sig[i]
 
-        adrs = new()
-        set_layer(adrs, i)
-        set_tree(adrs, curr_tree)
+        adrs = _new()
+        _set_layer(adrs, i)
+        _set_tree(adrs, curr_tree)
 
-        wots_adrs = copy_adrs(adrs)
-        set_keypair(wots_adrs, curr_leaf)
+        wots_adrs = bytearray(adrs)
+        _set_keypair(wots_adrs, curr_leaf)
 
         curr_msg = merkle_verify_root(
             wots_sig, curr_msg, path, pk_seed, wots_adrs, curr_leaf, n, w)
@@ -77,7 +77,7 @@ def hypertree_verify(
 
 def calc_root(sk_seed: bytes, pk_seed: bytes, h: int, d: int, n: int, w: int) -> bytes:
     height = h // d
-    adrs = new()
-    set_layer(adrs, d - 1)
-    set_tree(adrs, 0)
+    adrs = _new()
+    _set_layer(adrs, d - 1)
+    _set_tree(adrs, 0)
     return tree_hash(sk_seed, pk_seed, adrs, 0, height, n, w)
