@@ -87,7 +87,10 @@ def sign(
     adrs.set_keypair(fors_adrs, leaf_idx)
 
     sig_leafs, sig_auth = fors.sign(msg_chunk, sk_seed, pk_seed, fors_adrs, k, a, n)
-    fors_pk = fors.gen_pk(sk_seed, pk_seed, fors_adrs, k, a, n)
+    indices = fors.msg_to_indices(msg_chunk, k, a)
+    fors_pk = fors.pk_from_sig(
+        sig_leafs, sig_auth, indices, pk_seed, fors_adrs, k, a, n
+    )
 
     ht_sig = tree.hypertree_sign(
         fors_pk, sk_seed, pk_seed, tree_idx, leaf_idx, h, d, n, w)
