@@ -1,7 +1,6 @@
 from .adrs import (
     TYPE_FORS_ROOTS,
     TYPE_FORS_TREE,
-    _adrs_to_bytes,
     _set_keypair,
     _set_tree_height,
     _set_tree_idx,
