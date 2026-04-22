@@ -104,6 +104,7 @@ def hypertree_verify(
 
     for j in range(1, d):
 
+        tree_idx = tree_idx >> height
         leaf_idx = tree_idx & ((1 << height) - 1)
 
         tree_idx = tree_idx >> height

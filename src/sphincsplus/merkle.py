@@ -10,8 +10,6 @@
 from .adrs import (
     TYPE_TREE,
     TYPE_WOTS_HASH,
-    _adrs_get_tree_idx,
-    _adrs_get_tree_height,
     _adrs_set_keypair,
     _adrs_set_type,
     _adrs_set_tree_height,
@@ -54,18 +52,15 @@ def tree_hash(
 
     for i in range(1 << height):
         node = _get_leaf_pk(sk_seed, pk_seed, adrs, start_idx + i, n, w)
-
-        tree_adrs = bytearray(adrs)
-        _adrs_set_type(tree_adrs, TYPE_TREE)
-        _adrs_set_tree_height(tree_adrs, 1)
-        _adrs_set_tree_idx(tree_adrs, start_idx + i)
-
         node_height = 0
 
         while stack and stack[-1][1] == node_height:
-            _adrs_set_tree_idx(tree_adrs, (_adrs_get_tree_idx(tree_adrs) - 1) // 2)
+            tree_adrs = bytearray(adrs)
+            _adrs_set_type(tree_adrs, TYPE_TREE)
+            _adrs_set_tree_height(tree_adrs, node_height + 1)
+            _adrs_set_tree_idx(tree_adrs, (start_idx + i) >> (node_height + 1))
+
             node = _h(pk_seed, tree_adrs, stack.pop()[0], node)
-            _adrs_set_tree_height(tree_adrs, _adrs_get_tree_height(tree_adrs) + 1)
             node_height += 1
 
         stack.append([node, node_height])
@@ -123,20 +118,15 @@ def merkle_sig_to_pk(
 
     node = wots_sig_to_pk(sig[0], msg, pk_seed, wots_adrs, n, w)
 
-    tree_adrs = bytearray(adrs)
-
-    _adrs_set_type(tree_adrs, TYPE_TREE)
-    _adrs_set_tree_idx(tree_adrs, idx)
-
     for k, j in enumerate(sig[1]):
+        tree_adrs = bytearray(adrs)
+        _adrs_set_type(tree_adrs, TYPE_TREE)
         _adrs_set_tree_height(tree_adrs, k + 1)
+        _adrs_set_tree_idx(tree_adrs, idx >> (k + 1))
 
-        if (idx // (1 << k)) % 2 == 0:
-            _adrs_set_tree_idx(tree_adrs, _adrs_get_tree_idx(tree_adrs) // 2)
+        if ((idx >> k) & 1) == 0:
             node = _h(pk_seed, tree_adrs, node, j)
-
         else:
-            _adrs_set_tree_idx(tree_adrs, (_adrs_get_tree_idx(tree_adrs) - 1) // 2)
             node = _h(pk_seed, tree_adrs, j, node)
 
     return node

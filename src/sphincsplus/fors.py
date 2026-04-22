@@ -1,188 +1,163 @@
-import secrets
-
 from .adrs import (
-    _adrs_new,
-    _adrs_set_layer,
-    _adrs_set_tree,
-    _adrs_set_keypair,
+    TYPE_FORS_ROOTS,
+    TYPE_FORS_TREE,
+    _adrs_set_tree_height,
+    _adrs_set_tree_idx,
+    _adrs_set_type,
+    _adrs_get_tree_height,
+    _adrs_get_tree_idx
 )
 
-from . import fors
-from . import tree
-from . import wots
-from .hash import _h_msg, _prf_msg
+from .hash import _f, _h, _prf, _tl
 
 
-def digest_to_fors_and_idx(digest: bytes, k: int, a: int, h: int, d: int):
-    val = int.from_bytes(digest, "big")
-
-    total_bits = len(digest) * 8
-    used_bits = k * a + h
-
-    if total_bits > used_bits:
-        val >>= (total_bits - used_bits)
-
-    idx_leaf_len = h // d
-    idx_tree_len = h - idx_leaf_len
-    md_len = k * a
-
-    idx_leaf = val & ((1 << idx_leaf_len) - 1)
-    val >>= idx_leaf_len
-
-    idx_tree = val & ((1 << idx_tree_len) - 1)
-    val >>= idx_tree_len
-
-    md = val & ((1 << md_len) - 1)
-
-    nbytes = (md_len + 7) // 8
-    return md.to_bytes(nbytes, "big"), idx_tree, idx_leaf
+def _fors_sk_gen(sk_seed: bytes, adrs: bytearray, idx: int) -> bytes:
+    adr = bytearray(adrs)
+    _adrs_set_type(adr, TYPE_FORS_TREE)
+    _adrs_set_tree_height(adr, 0)
+    _adrs_set_tree_idx(adr, idx)
+    return _prf(sk_seed, adr)
 
 
-def sig_bytes_len(n: int, h: int, d: int, a: int, k: int, w: int, m: int) -> int:
-    height = h // d
-    ell = wots.get_len(n, w)
-    return n + k * (n + a * n) + d * (ell * n + height * n)
+def _msg_to_indices(msg: bytes, k: int, a: int) -> list:
+    bitlen = k * a
+    val = int.from_bytes(msg, "big")
 
-
-def keygen(n: int, h: int, d: int, a: int, k: int, w: int, m: int):
-    sk_seed = secrets.token_bytes(n)
-    sk_prf = secrets.token_bytes(n)
-    pk_seed = secrets.token_bytes(n)
-
-    pk_root = tree.hypertree_pk_gen(sk_seed, pk_seed, h, d, n, w)
-
-    sk = sk_seed + sk_prf + pk_seed + pk_root
-    pk = pk_seed + pk_root
-
-    return sk, pk
-
-
-def sign(msg: bytes, sk: bytes, n: int, h: int, d: int, a: int, k: int, w: int, m: int, rand: bool = True):
-
-    sk_seed = sk[:n]
-    sk_prf = sk[n:2 * n]
-    pk_seed = sk[2 * n:3 * n]
-    pk_root = sk[3 * n:4 * n]
-
-    opt = secrets.token_bytes(n) if rand else bytes(n)
-    r = _prf_msg(sk_prf, opt, msg)
-
-    digest = _h_msg(r, pk_seed, pk_root, msg, m)
-    md, idx_tree, idx_leaf = digest_to_fors_and_idx(digest, k, a, h, d)
-
-    fors_adrs = _adrs_new()
-    _adrs_set_layer(fors_adrs, 0)
-    _adrs_set_tree(fors_adrs, idx_tree)
-    _adrs_set_keypair(fors_adrs, idx_leaf)
-
-    sig_fors = fors.fors_sign(md, sk_seed, pk_seed, fors_adrs, k, a)
-    sig_leafs, sig_auth = sig_fors
-
-    fors_pk = fors.fors_sig_to_pk(sig_fors, md, pk_seed, fors_adrs, k, a)
-
-    ht_sig = tree.hypertree_sign(
-        fors_pk,
-        sk_seed,
-        pk_seed,
-        idx_tree,
-        idx_leaf,
-        h,
-        d,
-        n,
-        w,
-    )
-
-    body_f = bytearray()
+    idxs = []
     for i in range(k):
-        body_f += sig_leafs[i]
-        for node in sig_auth[i]:
-            body_f += node
+        shift = bitlen - (i + 1) * a
+        idxs.append((val >> shift) & ((1 << a) - 1))
 
-    body_ht = bytearray()
-    for wots_sig, path in ht_sig:
-        for blk in wots_sig:
-            body_ht += blk
-        for node in path:
-            body_ht += node
-
-    return r + bytes(body_f) + bytes(body_ht)
+    return idxs
 
 
-def verify(msg: bytes, sig: bytes, pk: bytes, n: int, h: int, d: int, a: int, k: int, w: int, m: int):
+def fors_treehash(sk_seed: bytes, pk_seed: bytes, start: int, height: int, adrs: bytearray) -> bytes:
+    assert start % (1 << height) == 0
 
-    if m != k * a + h or len(pk) != 2 * n:
-        return False
+    stack = []
 
-    pk_seed = pk[:n]
-    pk_root = pk[n:]
+    for i in range(1 << height):
+        new_adrs = bytearray(adrs)
 
-    r = sig[:n]
-    body = sig[n:]
+        _adrs_set_type(new_adrs, TYPE_FORS_TREE)
 
-    digest = _h_msg(r, pk_seed, pk_root, msg, m)
-    md, idx_tree, idx_leaf = digest_to_fors_and_idx(digest, k, a, h, d)
+        _adrs_set_tree_height(new_adrs, 0)
+        _adrs_set_tree_idx(new_adrs, start + i)
 
-    height = h // d
-    ell = wots.get_len(n, w)
+        sk = _prf(sk_seed, new_adrs)
+        node = _f(pk_seed, new_adrs, sk)
 
-    fors_len = k * (n + a * n)
-    ht_len = d * (ell * n + height * n)
+        node_height = 0
 
-    if len(body) != fors_len + ht_len:
-        return False
+        _adrs_set_tree_height(new_adrs, 1)
+        _adrs_set_tree_idx(new_adrs, start + i)
 
-    fors_buf = body[:fors_len]
-    ht_buf = body[fors_len:]
+        while stack and stack[-1][1] == node_height:
+            g = stack.pop()[0]
 
-    sig_leafs = []
+            _adrs_set_tree_idx(new_adrs, (_adrs_get_tree_idx(new_adrs) - 1) // 2)
+
+            node = _h(pk_seed, new_adrs, g, node)
+
+            _adrs_set_tree_height(new_adrs, _adrs_get_tree_height(new_adrs) + 1)
+
+            node_height += 1
+
+        stack.append([node, node_height])
+
+    return stack.pop()[0]
+
+
+def fors_pk_gen(sk_seed: bytes, pk_seed: bytes, adrs: bytearray, k: int, a: int) -> bytes:
+    pk_adrs = bytearray(adrs)
+    roots = []
+
+    for i in range(k):
+        roots.append(
+            fors_treehash(sk_seed, pk_seed, i * (1 << a), a, pk_adrs)
+        )
+
+    _adrs_set_type(pk_adrs, TYPE_FORS_ROOTS)
+
+    return _tl(pk_seed, pk_adrs, b"".join(roots))
+
+
+def fors_sign(msg: bytes, sk_seed: bytes, pk_seed: bytes, adrs: bytearray, k: int, a: int) -> tuple[list[bytes], list[list[bytes]]]:
+    idxs = _msg_to_indices(msg, k, a)
+
+    sig_sk = []
     sig_auth = []
 
-    o = 0
-    for _ in range(k):
-        sig_leafs.append(fors_buf[o:o + n])
-        o += n
+    t = 1 << a
 
-        path = []
-        for _ in range(a):
-            path.append(fors_buf[o:o + n])
-            o += n
+    for i in range(k):
+        idx = idxs[i]
+        base = i * t
 
-        sig_auth.append(path)
+        new_adrs = bytearray(adrs)
 
-    fors_adrs = _adrs_new()
-    _adrs_set_layer(fors_adrs, 0)
-    _adrs_set_tree(fors_adrs, idx_tree)
-    _adrs_set_keypair(fors_adrs, idx_leaf)
+        _adrs_set_type(new_adrs, TYPE_FORS_TREE)
+        _adrs_set_tree_height(new_adrs, 0)
+        _adrs_set_tree_idx(new_adrs, base + idx)
 
-    sig_fors = [sig_leafs, sig_auth]
+        sk = _prf(sk_seed, new_adrs)
+        sig_sk.append(sk)
 
-    fors_pk = fors_sig_to_pk(sig_fors, md, pk_seed, fors_adrs, k, a)
+        auth = []
 
-    ht_sig = []
-    o = 0
+        for j in range(a):
+            s = (idx // (1 << j)) ^ 1
 
-    for _ in range(d):
-        wots_sig = []
-        for _ in range(ell):
-            wots_sig.append(ht_buf[o:o + n])
-            o += n
+            auth.append(
+                fors_treehash(
+                    sk_seed,
+                    pk_seed,
+                    base + s * (1 << j),
+                    j,
+                    new_adrs,
+                )
+            )
 
-        path = []
-        for _ in range(height):
-            path.append(ht_buf[o:o + n])
-            o += n
+        sig_auth.append(auth)
 
-        ht_sig.append((wots_sig, path))
+    return sig_sk, sig_auth
 
-    return tree.hypertree_verify(
-        fors_pk,
-        ht_sig,
-        pk_seed,
-        pk_root,
-        idx_tree,
-        idx_leaf,
-        h,
-        d,
-        n,
-        w,
-    )
+
+def fors_sig_to_pk(sig: tuple[list[bytes], list[list[bytes]]], msg: bytes, pk_seed: bytes, adrs: bytearray, k: int, a: int) -> bytes:
+    idxs = _msg_to_indices(msg, k, a)
+
+    roots = []
+
+    for i in range(k):
+        idx = idxs[i]
+        base = i * (1 << a)
+
+        adr = bytearray(adrs)
+        _adrs_set_type(adr, TYPE_FORS_TREE)
+        _adrs_set_tree_height(adr, 0)
+        _adrs_set_tree_idx(adr, base + idx)
+
+        node = _f(pk_seed, adr, sig[0][i])
+
+        for j in range(a):
+            adr_j = bytearray(adrs)
+            _adrs_set_type(adr_j, TYPE_FORS_TREE)
+            _adrs_set_tree_height(adr_j, j + 1)
+
+            if ((idx >> j) & 1) == 0:
+                _adrs_set_tree_idx(adr_j, (base + idx) // (2 ** (j + 1)))
+                node = _h(pk_seed, adr_j, node, sig[1][i][j])
+            else:
+                _adrs_set_tree_idx(adr_j, (base + idx - 1) // (2 ** (j + 1)))
+                node = _h(pk_seed, adr_j, sig[1][i][j], node)
+
+        roots.append(node)
+
+    pk_adrs = bytearray(adrs)
+    _adrs_set_type(pk_adrs, TYPE_FORS_ROOTS)
+
+    return _tl(pk_seed, pk_adrs, b"".join(roots))
+
+
+def fors_verify(sig: tuple[list[bytes], list[list[bytes]]], msg: bytes, pk_seed: bytes, pk: bytes, adrs: bytearray, k: int, a: int) -> bool:
+    return fors_sig_to_pk(sig, msg, pk_seed, adrs, k, a) == pk
