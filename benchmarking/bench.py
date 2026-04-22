@@ -33,9 +33,9 @@ for name, n, h, d, a, k, w, m in test_cases:
     # print(verify(b"message", sig, pk, n, h, d, a, k, w, m))
 
     print("start benchmarking", name)
-    # runner.bench_func(name, keygen, n, h, d, a, k, w, m)
-    # runner.bench_func(name, sign, b"message", sk, n, h, d, a, k, w, m)
-    # runner.bench_func(name, verify, b"message", sig, pk, n, h, d, a, k, w, m)
+    runner.bench_func(name, keygen, n, h, d, a, k, w, m)
+    runner.bench_func(name, sign, b"message", sk, n, h, d, a, k, w, m)
+    runner.bench_func(name, verify, b"message", sig, pk, n, h, d, a, k, w, m)
 
     print("finish benchmarking", name)
 
