@@ -10,12 +10,12 @@
 from .adrs import (
     TYPE_TREE,
     TYPE_WOTS_HASH,
-    _get_tree_idx,
-    _get_tree_height,
-    _set_keypair,
-    _set_type,
-    _set_tree_height,
-    _set_tree_idx,
+    _adrs_get_tree_idx,
+    _adrs_get_tree_height,
+    _adrs_set_keypair,
+    _adrs_set_type,
+    _adrs_set_tree_height,
+    _adrs_set_tree_idx,
 )
 
 from .hash import _h
@@ -32,8 +32,8 @@ def _get_leaf_pk(
 ) -> bytes:
     leaf_adrs = bytearray(adrs)
 
-    _set_type(leaf_adrs, TYPE_WOTS_HASH)
-    _set_keypair(leaf_adrs, idx)
+    _adrs_set_type(leaf_adrs, TYPE_WOTS_HASH)
+    _adrs_set_keypair(leaf_adrs, idx)
 
     return wots_gen_pk(sk_seed, pk_seed, leaf_adrs, n, w)
 
@@ -56,16 +56,16 @@ def tree_hash(
         node = _get_leaf_pk(sk_seed, pk_seed, adrs, start_idx + i, n, w)
 
         tree_adrs = bytearray(adrs)
-        _set_type(tree_adrs, TYPE_TREE)
-        _set_tree_height(tree_adrs, 1)
-        _set_tree_idx(tree_adrs, start_idx + i)
+        _adrs_set_type(tree_adrs, TYPE_TREE)
+        _adrs_set_tree_height(tree_adrs, 1)
+        _adrs_set_tree_idx(tree_adrs, start_idx + i)
 
         node_height = 0
 
         while stack and stack[-1][1] == node_height:
-            _set_tree_idx(tree_adrs, (_get_tree_idx(tree_adrs) - 1) // 2)
+            _adrs_set_tree_idx(tree_adrs, (_adrs_get_tree_idx(tree_adrs) - 1) // 2)
             node = _h(pk_seed, tree_adrs, stack.pop()[0], node)
-            _set_tree_height(tree_adrs, _get_tree_height(tree_adrs) + 1)
+            _adrs_set_tree_height(tree_adrs, _adrs_get_tree_height(tree_adrs) + 1)
             node_height += 1
 
         stack.append([node, node_height])
@@ -98,8 +98,8 @@ def merkle_sign(
 
     wots_adrs = bytearray(adrs)
 
-    _set_type(wots_adrs, TYPE_WOTS_HASH)
-    _set_keypair(wots_adrs, idx)
+    _adrs_set_type(wots_adrs, TYPE_WOTS_HASH)
+    _adrs_set_keypair(wots_adrs, idx)
 
     sig = wots_sign(msg, sk_seed, pk_seed, wots_adrs, n, w)
 
@@ -118,25 +118,25 @@ def merkle_sig_to_pk(
 ) -> bytes:
     wots_adrs = bytearray(adrs)
 
-    _set_type(wots_adrs, TYPE_WOTS_HASH)
-    _set_keypair(wots_adrs, idx)
+    _adrs_set_type(wots_adrs, TYPE_WOTS_HASH)
+    _adrs_set_keypair(wots_adrs, idx)
 
     node = wots_sig_to_pk(sig[0], msg, pk_seed, wots_adrs, n, w)
 
     tree_adrs = bytearray(adrs)
 
-    _set_type(tree_adrs, TYPE_TREE)
-    _set_tree_idx(tree_adrs, idx)
+    _adrs_set_type(tree_adrs, TYPE_TREE)
+    _adrs_set_tree_idx(tree_adrs, idx)
 
     for k, j in enumerate(sig[1]):
-        _set_tree_height(tree_adrs, k + 1)
+        _adrs_set_tree_height(tree_adrs, k + 1)
 
         if (idx // (1 << k)) % 2 == 0:
-            _set_tree_idx(tree_adrs, _get_tree_idx(tree_adrs) // 2)
+            _adrs_set_tree_idx(tree_adrs, _adrs_get_tree_idx(tree_adrs) // 2)
             node = _h(pk_seed, tree_adrs, node, j)
 
         else:
-            _set_tree_idx(tree_adrs, (_get_tree_idx(tree_adrs) - 1) // 2)
+            _adrs_set_tree_idx(tree_adrs, (_adrs_get_tree_idx(tree_adrs) - 1) // 2)
             node = _h(pk_seed, tree_adrs, j, node)
 
     return node

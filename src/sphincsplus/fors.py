@@ -1,130 +1,188 @@
+import secrets
+
 from .adrs import (
-    TYPE_FORS_ROOTS,
-    TYPE_FORS_TREE,
-    _set_keypair,
-    _set_tree_height,
-    _set_tree_idx,
-    _set_type,
+    _adrs_new,
+    _adrs_set_layer,
+    _adrs_set_tree,
+    _adrs_set_keypair,
 )
-from .hash import _f, _prf, _tl
-from .merkle import *
+
+from . import fors
+from . import tree
+from . import wots
+from .hash import _h_msg, _prf_msg
 
 
-def msg_to_indices(msg_chunk: bytes, k: int, a: int) -> list:
-    bits = 0
-    val = 0
-    indices = []
+def digest_to_fors_and_idx(digest: bytes, k: int, a: int, h: int, d: int):
+    val = int.from_bytes(digest, "big")
 
-    for byte in msg_chunk:
-        val = (val << 8) | byte
-        bits += 8
+    total_bits = len(digest) * 8
+    used_bits = k * a + h
 
-        while bits >= a and len(indices) < k:
-            bits -= a
-            indices.append((val >> bits) & ((1 << a) - 1))
-            val &= (1 << bits) - 1
+    if total_bits > used_bits:
+        val >>= (total_bits - used_bits)
 
-    while len(indices) < k:
-        indices.append(val & ((1 << a) - 1))
-        val = 0
+    idx_leaf_len = h // d
+    idx_tree_len = h - idx_leaf_len
+    md_len = k * a
 
-    return indices[:k]
+    idx_leaf = val & ((1 << idx_leaf_len) - 1)
+    val >>= idx_leaf_len
 
+    idx_tree = val & ((1 << idx_tree_len) - 1)
+    val >>= idx_tree_len
 
-def fors_leaf(sk_seed: bytes, pk_seed: bytes,
-              adrs: bytearray, tree_idx: int, leaf_idx: int, n: int) -> bytes:
-    sk_adrs = bytearray(adrs)
-    _set_type(sk_adrs, TYPE_FORS_TREE)
-    _set_keypair(sk_adrs, tree_idx)
-    _set_tree_height(sk_adrs, 0)
-    _set_tree_idx(sk_adrs, leaf_idx)
-    sk_val = _prf(sk_seed, sk_adrs)
+    md = val & ((1 << md_len) - 1)
 
-    leaf_adrs = bytearray(adrs)
-    _set_type(leaf_adrs, TYPE_FORS_TREE)
-    _set_keypair(leaf_adrs, tree_idx)
-    _set_tree_height(leaf_adrs, 0)
-    _set_tree_idx(leaf_adrs, leaf_idx)
-
-    return _f(pk_seed, leaf_adrs, sk_val)
+    nbytes = (md_len + 7) // 8
+    return md.to_bytes(nbytes, "big"), idx_tree, idx_leaf
 
 
-def fors_leafs(sk_seed: bytes, pk_seed: bytes,
-               adrs: bytearray, tree_idx: int, a: int, n: int) -> list:
-    return [
-        fors_leaf(sk_seed, pk_seed, adrs, tree_idx, i, n)
-        for i in range(1 << a)
-    ]
+def sig_bytes_len(n: int, h: int, d: int, a: int, k: int, w: int, m: int) -> int:
+    height = h // d
+    ell = wots.get_len(n, w)
+    return n + k * (n + a * n) + d * (ell * n + height * n)
 
 
-def sign(msg_chunk: bytes, sk_seed: bytes, pk_seed: bytes,
-         adrs: bytearray, k: int, a: int, n: int) -> tuple:
-    indices = msg_to_indices(msg_chunk, k, a)
+def keygen(n: int, h: int, d: int, a: int, k: int, w: int, m: int):
+    sk_seed = secrets.token_bytes(n)
+    sk_prf = secrets.token_bytes(n)
+    pk_seed = secrets.token_bytes(n)
+
+    pk_root = tree.hypertree_pk_gen(sk_seed, pk_seed, h, d, n, w)
+
+    sk = sk_seed + sk_prf + pk_seed + pk_root
+    pk = pk_seed + pk_root
+
+    return sk, pk
+
+
+def sign(msg: bytes, sk: bytes, n: int, h: int, d: int, a: int, k: int, w: int, m: int, rand: bool = True):
+
+    sk_seed = sk[:n]
+    sk_prf = sk[n:2 * n]
+    pk_seed = sk[2 * n:3 * n]
+    pk_root = sk[3 * n:4 * n]
+
+    opt = secrets.token_bytes(n) if rand else bytes(n)
+    r = _prf_msg(sk_prf, opt, msg)
+
+    digest = _h_msg(r, pk_seed, pk_root, msg, m)
+    md, idx_tree, idx_leaf = digest_to_fors_and_idx(digest, k, a, h, d)
+
+    fors_adrs = _adrs_new()
+    _adrs_set_layer(fors_adrs, 0)
+    _adrs_set_tree(fors_adrs, idx_tree)
+    _adrs_set_keypair(fors_adrs, idx_leaf)
+
+    sig_fors = fors.fors_sign(md, sk_seed, pk_seed, fors_adrs, k, a)
+    sig_leafs, sig_auth = sig_fors
+
+    fors_pk = fors.fors_sig_to_pk(sig_fors, md, pk_seed, fors_adrs, k, a)
+
+    ht_sig = tree.hypertree_sign(
+        fors_pk,
+        sk_seed,
+        pk_seed,
+        idx_tree,
+        idx_leaf,
+        h,
+        d,
+        n,
+        w,
+    )
+
+    body_f = bytearray()
+    for i in range(k):
+        body_f += sig_leafs[i]
+        for node in sig_auth[i]:
+            body_f += node
+
+    body_ht = bytearray()
+    for wots_sig, path in ht_sig:
+        for blk in wots_sig:
+            body_ht += blk
+        for node in path:
+            body_ht += node
+
+    return r + bytes(body_f) + bytes(body_ht)
+
+
+def verify(msg: bytes, sig: bytes, pk: bytes, n: int, h: int, d: int, a: int, k: int, w: int, m: int):
+
+    if m != k * a + h or len(pk) != 2 * n:
+        return False
+
+    pk_seed = pk[:n]
+    pk_root = pk[n:]
+
+    r = sig[:n]
+    body = sig[n:]
+
+    digest = _h_msg(r, pk_seed, pk_root, msg, m)
+    md, idx_tree, idx_leaf = digest_to_fors_and_idx(digest, k, a, h, d)
+
+    height = h // d
+    ell = wots.get_len(n, w)
+
+    fors_len = k * (n + a * n)
+    ht_len = d * (ell * n + height * n)
+
+    if len(body) != fors_len + ht_len:
+        return False
+
+    fors_buf = body[:fors_len]
+    ht_buf = body[fors_len:]
+
     sig_leafs = []
-    sig_auth_paths = []
+    sig_auth = []
 
-    for tree_idx in range(k):
-        idx = indices[tree_idx]
-        leafs = fors_leafs(sk_seed, pk_seed, adrs, tree_idx, a, n)
+    o = 0
+    for _ in range(k):
+        sig_leafs.append(fors_buf[o:o + n])
+        o += n
 
-        sk_adrs = bytearray(adrs)
-        _set_type(sk_adrs, TYPE_FORS_TREE)
-        _set_keypair(sk_adrs, tree_idx)
-        _set_tree_height(sk_adrs, 0)
-        _set_tree_idx(sk_adrs, idx)
-        sig_leafs.append(_prf(sk_seed, sk_adrs))
+        path = []
+        for _ in range(a):
+            path.append(fors_buf[o:o + n])
+            o += n
 
-        _, auth = get_root_path(pk_seed, adrs, leafs, idx, TYPE_FORS_TREE)
-        sig_auth_paths.append(auth)
+        sig_auth.append(path)
 
-    return sig_leafs, sig_auth_paths
+    fors_adrs = _adrs_new()
+    _adrs_set_layer(fors_adrs, 0)
+    _adrs_set_tree(fors_adrs, idx_tree)
+    _adrs_set_keypair(fors_adrs, idx_leaf)
 
+    sig_fors = [sig_leafs, sig_auth]
 
-def pk_from_sig(sig_leafs: list, sig_auth: list, indices: list,
-                pk_seed: bytes, adrs: bytearray, k: int, a: int, n: int) -> bytes:
-    roots = []
-    for tree_idx in range(k):
-        idx = indices[tree_idx]
+    fors_pk = fors_sig_to_pk(sig_fors, md, pk_seed, fors_adrs, k, a)
 
-        leaf_adrs = bytearray(adrs)
-        _set_type(leaf_adrs, TYPE_FORS_TREE)
-        _set_keypair(leaf_adrs, tree_idx)
-        _set_tree_height(leaf_adrs, 0)
-        _set_tree_idx(leaf_adrs, idx)
-        leaf = _f(pk_seed, leaf_adrs, sig_leafs[tree_idx])
+    ht_sig = []
+    o = 0
 
-        root = root_from_path(leaf, idx, sig_auth[tree_idx],
-                              pk_seed, adrs, TYPE_FORS_TREE)
-        roots.append(root)
+    for _ in range(d):
+        wots_sig = []
+        for _ in range(ell):
+            wots_sig.append(ht_buf[o:o + n])
+            o += n
 
-    pk_adrs = bytearray(adrs)
-    _set_type(pk_adrs, TYPE_FORS_ROOTS)
+        path = []
+        for _ in range(height):
+            path.append(ht_buf[o:o + n])
+            o += n
 
-    return _tl(pk_seed, pk_adrs, b"".join(roots))
+        ht_sig.append((wots_sig, path))
 
-
-def gen_pk(sk_seed: bytes, pk_seed: bytes,
-           adrs: bytearray, k: int, a: int, n: int) -> bytes:
-    roots = []
-
-    # print("here")
-
-    for tree_idx in range(k):
-        leafs = fors_leafs(sk_seed, pk_seed, adrs, tree_idx, a, n)
-        root = get_root(pk_seed, adrs, leafs, TYPE_FORS_TREE)
-        roots.append(root)
-
-    pk_adrs = bytearray(adrs)
-    _set_type(pk_adrs, TYPE_FORS_ROOTS)
-
-    # print(pk);
-
-    return _tl(pk_seed, pk_adrs, b"".join(roots))
-
-
-def verify(sig_leafs: list, sig_auth: list, msg_chunk: bytes,
-           pk_seed: bytes, pk: bytes, adrs: bytearray,
-           k: int, a: int, n: int) -> bool:
-    indices = msg_to_indices(msg_chunk, k, a)
-
-    return pk_from_sig(sig_leafs, sig_auth, indices, pk_seed, adrs, k, a, n) == pk
+    return tree.hypertree_verify(
+        fors_pk,
+        ht_sig,
+        pk_seed,
+        pk_root,
+        idx_tree,
+        idx_leaf,
+        h,
+        d,
+        n,
+        w,
+    )

@@ -1,7 +1,13 @@
 import math
 
-from .adrs import _set_hash, _set_chain, _set_type, _set_keypair, _get_keypair
-from .adrs import TYPE_WOTS_PK
+from .adrs import (
+    _adrs_set_hash,
+    _adrs_set_chain,
+    _adrs_set_type,
+    _adrs_set_keypair,
+    _adrs_get_keypair,
+    TYPE_WOTS_PK
+)
 
 from .hash import _f, _prf, _tl
 
@@ -59,7 +65,7 @@ def _chain(msg: bytes, start: int, steps: int, pk_seed: bytes, adrs: bytearray, 
 
     for j in range(steps):
         new_adrs = bytearray(adrs)
-        _set_hash(new_adrs, start + j)
+        _adrs_set_hash(new_adrs, start + j)
         x = _f(pk_seed, new_adrs, x)
 
     return x
@@ -70,8 +76,8 @@ def _gen_sk(sk_seed: bytes, adrs: bytearray, n: int, w: int) -> list:
     for i in range(get_len(n, w)):
         new_adrs = bytearray(adrs)
 
-        _set_chain(new_adrs, i)
-        _set_hash(new_adrs, 0)
+        _adrs_set_chain(new_adrs, i)
+        _adrs_set_hash(new_adrs, 0)
 
         out.append(_prf(sk_seed, new_adrs))
 
@@ -86,14 +92,14 @@ def wots_gen_pk(sk_seed: bytes, pk_seed: bytes, adrs: bytearray, n: int, w: int)
     for i in range(get_len(n, w)):
         new_adrs = bytearray(adrs)
 
-        _set_chain(new_adrs, i)
-        _set_hash(new_adrs, 0)
+        _adrs_set_chain(new_adrs, i)
+        _adrs_set_hash(new_adrs, 0)
 
         sk = _prf(sk_seed, new_adrs)
         pk_list.append(_chain(sk, 0, w - 1, pk_seed, new_adrs, w))
 
-    _set_type(pk_adrs, TYPE_WOTS_PK)
-    _set_keypair(pk_adrs, _get_keypair(adrs))
+    _adrs_set_type(pk_adrs, TYPE_WOTS_PK)
+    _adrs_set_keypair(pk_adrs, _adrs_get_keypair(adrs))
 
     return _tl(pk_seed, pk_adrs, b"".join(pk_list))
 
@@ -114,8 +120,8 @@ def wots_sign(msg: bytes, sk_seed: bytes, pk_seed: bytes, adrs: bytearray, n: in
     for i in range(length):
         new_adrs = bytearray(adrs)
 
-        _set_chain(new_adrs, i)
-        _set_hash(new_adrs, 0)
+        _adrs_set_chain(new_adrs, i)
+        _adrs_set_hash(new_adrs, 0)
 
         sk = _prf(sk_seed, new_adrs)
         sig.append(_chain(sk, 0, msg_c[i], pk_seed, new_adrs, w))
@@ -134,15 +140,15 @@ def wots_sig_to_pk(sig: list, msg: bytes, pk_seed: bytes, adrs: bytearray, n: in
     for i in range(get_len(n, w)):
         new_adrs = bytearray(adrs)
 
-        _set_chain(new_adrs, i)
-        _set_hash(new_adrs, 0)
+        _adrs_set_chain(new_adrs, i)
+        _adrs_set_hash(new_adrs, 0)
 
         pk_list.append(
             _chain(sig[i], msg_c[i], w - 1 - msg_c[i], pk_seed, new_adrs, w)
         )
 
-    _set_type(pk_adrs, TYPE_WOTS_PK)
-    _set_keypair(pk_adrs, _get_keypair(adrs))
+    _adrs_set_type(pk_adrs, TYPE_WOTS_PK)
+    _adrs_set_keypair(pk_adrs, _adrs_get_keypair(adrs))
 
     return _tl(pk_seed, pk_adrs, b"".join(pk_list))
 
