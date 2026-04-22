@@ -20,7 +20,7 @@ def _hash(inp: bytes, out_len: int) -> bytes:
     return hashlib.shake_256(inp).digest(out_len)
 
 
-def _mask_gen(pk_seed: bytes, adrs: bytes, m: bytes) -> bytes:
+def _mask_gen(pk_seed: bytes, adrs: bytearray, m: bytes) -> bytes:
     mask = _hash(pk_seed + adrs, len(m))
     return bytes(x ^ y for x, y in zip(m, mask))
 
@@ -29,7 +29,7 @@ def _h_msg(r: bytes, pk_seed: bytes, pk_root: bytes, msg: bytes, m: int) -> byte
     return _hash(r + pk_seed + pk_root + msg, m)
 
 
-def _prf(sk_seed: bytes, adrs: bytes) -> bytes:
+def _prf(sk_seed: bytes, adrs: bytearray) -> bytes:
     return _hash(sk_seed + adrs, len(sk_seed))
 
 
@@ -37,18 +37,18 @@ def _prf_msg(sk_prf: bytes, opt_rand: bytes, msg: bytes) -> bytes:
     return _hash(sk_prf + opt_rand + msg, len(sk_prf))
 
 
-def _f(pk_seed: bytes, adrs: bytes, m1: bytes) -> bytes:
+def _f(pk_seed: bytes, adrs: bytearray, m1: bytes) -> bytes:
     mask = _mask_gen(pk_seed, adrs, m1)
     return _hash(pk_seed + adrs + mask, len(pk_seed))
 
 
-def _h(pk_seed: bytes, adrs: bytes, m1: bytes, m2: bytes) -> bytes:
+def _h(pk_seed: bytes, adrs: bytearray, m1: bytes, m2: bytes) -> bytes:
     mask_m1 = _mask_gen(pk_seed, adrs, m1)
     mask_m2 = _mask_gen(pk_seed, adrs, m2)
 
     return _hash(pk_seed + adrs + mask_m1 + mask_m2, len(pk_seed))
 
 
-def _tl(pk_seed: bytes, adrs: bytes, m: bytes) -> bytes:
+def _tl(pk_seed: bytes, adrs: bytearray, m: bytes) -> bytes:
     mask = _mask_gen(pk_seed, adrs, m)
     return _hash(pk_seed + adrs + mask, len(pk_seed))
