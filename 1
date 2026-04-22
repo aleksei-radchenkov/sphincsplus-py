@@ -43,29 +43,30 @@ def hypertree_sign(
 
     root = merkle_sig_to_pk(sig, msg, pk_seed, adrs, leaf_idx, n, w)
 
-    curr_tree = tree_idx >> height
-    curr_msg = root
+    curr_tree = tree_idx
 
-    for i in range(1, d):
+    for j in range(1, d):
+
         curr_leaf = curr_tree & ((1 << height) - 1)
         curr_tree >>= height
 
-        _adrs_set_layer(adrs, i)
+        wots_sig, auth_path = ht_sig[j]
+
+        _adrs_set_layer(adrs, j)
         _adrs_set_tree(adrs, curr_tree)
 
-        sig = merkle_sign(
-            curr_msg, sk_seed,
-            pk_seed, adrs,
+        node = merkle_sig_to_pk(
+            [wots_sig, auth_path],
+            root,
+            pk_seed,
+            adrs,
             curr_leaf,
-            height, n, w
+            n,
+            w
         )
 
-        ht_sig.append(sig)
-
-        root = merkle_sig_to_pk(sig, curr_msg, pk_seed, adrs, curr_leaf, n, w)
-
-        if i < d - 1:
-            curr_msg = root
+    if i < d - 1:
+        curr_msg = root
 
     return ht_sig
 
