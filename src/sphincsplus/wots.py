@@ -73,7 +73,11 @@ def checksum(msg_base_w: list, w: int, n: int) -> list:
 
 
 def chain(inp: bytes, start: int, steps: int,
-          pk_seed: bytes, layer: int, tree: int, keypair: int, chain_idx: int) -> bytes:
+          pk_seed: bytes, layer: int, tree: int, keypair: int, chain_idx: int, w: int) -> bytes:
+
+    if start + steps > w - 1:
+        return None
+
     out = inp
 
     for i in range(start, start + steps):
@@ -100,7 +104,7 @@ def gen_pk(sk_seed: bytes, pk_seed: bytes, adrs: bytearray, n: int, w: int) -> b
     pk_list = [
         chain(sk[i], 0, w - 1,
               pk_seed, get_layer(adrs),
-              get_tree(adrs), get_keypair(adrs), i)
+              get_tree(adrs), get_keypair(adrs), i, w)
 
         for i in range(get_len(n, w))
     ]
@@ -120,7 +124,7 @@ def sign(msg: bytes, sk_seed: bytes, pk_seed: bytes,
 
     return [
         chain(sk[i], 0, val[i], pk_seed, get_layer(adrs), get_tree(adrs),
-              get_keypair(adrs), i)
+              get_keypair(adrs), i, w)
 
         for i in range(get_len(n, w))
     ]
@@ -144,6 +148,7 @@ def sig_to_pk(sig: list, msg: bytes, pk_seed: bytes,
             get_tree(adrs),
             get_keypair(adrs),
             i,
+            w
         ))
 
     return th(pk_seed,
