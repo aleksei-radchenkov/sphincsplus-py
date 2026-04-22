@@ -15,8 +15,6 @@
 
 import hashlib
 
-from .adrs import (_set_hash)
-
 
 def _hash(inp: bytes, out_len: int) -> bytes:
     return hashlib.shake_256(inp).digest(out_len)
@@ -45,15 +43,10 @@ def _f(pk_seed: bytes, adrs: bytearray, m1: bytes) -> bytes:
 
 
 def _h(pk_seed: bytes, adrs: bytearray, m1: bytes, m2: bytes) -> bytes:
-    adrs_1 = bytearray(adrs)
-    adrs_2 = bytearray(adrs)
+    masked = _mask_gen(pk_seed, adrs, m1 + m2)
 
-    # All functions must be updating the addresses after each hash call.
-    _set_hash(adrs_1, 0)
-    _set_hash(adrs_2, 1)
-
-    mask_m1 = _mask_gen(pk_seed, adrs_1, m1)
-    mask_m2 = _mask_gen(pk_seed, adrs_2, m2)
+    mask_m1 = masked[:len(m1)]
+    mask_m2 = masked[len(m1):]
 
     return _hash(pk_seed + adrs + mask_m1 + mask_m2, len(pk_seed))
 
