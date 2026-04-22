@@ -7,6 +7,14 @@ The original paper can be found here: [The SPHINCS+ Signature Framework](https:/
 Install [Docker](https://www.docker.com/get-started/).
 
 ## Usage
+n : the security parameter in bytes.
+w : the Winternitz parameter as defined in Section 3.1.
+h : the height of the hypertree as defined in Section 4.2.1.
+d : the number of layers in the hypertree as defined in Section 4.2.1.
+k : the number of trees in FORS as defined in Section 5.1.
+t : the number of leaves of a FORS tree as defined in Section 5.1
+m : the message digest length in bytes
+
 _TODO: Firstly explain the signatures of sphincs keygen, sign, and verify.
 Do we need to expose any additional functions and explain them for usage? I think we should document all the functions in `__all__` in `__init__.py` (or remove them if we don't intend users to import them)._
 
@@ -45,6 +53,11 @@ docker run --rm sphincsplus pytest tests/ -q
 ```
 
 ## Benchmarking
-_TODO_
+Execute the following command to perform benchmarking locally:
+```bash
+docker build -t sphincsplus .
+docker run --rm sphincsplus pytest --benchmark-only
+```
+
 
 
