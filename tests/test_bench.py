@@ -58,6 +58,6 @@ def test_verify(benchmark, tc):
         verify,
         args=(message, sig, pk, tc.n, tc.h, tc.d, tc.a, tc.k, tc.w, tc.m),
         rounds=10,
-        iterations=10
+        iterations=10,
         warmup_rounds=1
     )
