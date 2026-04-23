@@ -1,4 +1,4 @@
-from sphincsplus import sphincs
+from sphincsplus import sphincs, tree
 
 import pytest
 import secrets
@@ -55,7 +55,7 @@ def test_bad_sig_fail(test_case):
     sig = sphincs.sign(msg, sk, n, h, d, a, k, w, m)
 
     sig_bad = bytearray(sig)
-    sig_bad[0] &= 0xaa
+    sig_bad[0] ^= 0xaa
 
     assert not sphincs.verify(msg, bytes(sig_bad), pk, n, h, d, a, k, w, m)
 
