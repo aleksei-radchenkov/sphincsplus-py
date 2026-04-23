@@ -1,4 +1,5 @@
-from . import (adrs, fors, hash, merkle, sphincs, tree, wots)
+from . import (adrs, fors, merkle, sphincs, tree, wots)
+
 from .sphincs import (
     keygen,
     sign,
@@ -8,7 +9,6 @@ from .sphincs import (
 __all__ = [
     "adrs",
     "fors",
-    "hash",
     "keygen",
     "merkle",
     "sign",
