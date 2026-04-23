@@ -3,7 +3,7 @@ from typing import NamedTuple
 
 import pytest
 
-from sphincsplus import keygen, sign, sphincs, verify, wots
+from sphincsplus import keygen, sign, sphincs, verify
 
 
 class TestCase(NamedTuple):

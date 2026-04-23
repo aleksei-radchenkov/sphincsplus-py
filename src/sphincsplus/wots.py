@@ -11,31 +11,31 @@ def _log_w(w: int) -> int:
 
 
 @lru_cache(maxsize=None)
-def _get_D(l: int, s: int, w: int) -> int:
-    if s < 0 or s > l * (w - 1):
+def _get_D(length: int, s: int, w: int) -> int:
+    if s < 0 or s > length * (w - 1):
         return 0
-    if l == 0:
+    if length == 0:
         return 1 if s == 0 else 0
 
     res = 0
-    for i in range(l + 1):
+    for i in range(length + 1):
         sign = (-1) ** i
-        comb_l_i = math.comb(l, i)
-        val = s - i * w + l - 1
-        if val >= l - 1:
-            res += sign * comb_l_i * math.comb(val, l - 1)
+        comb_l_i = math.comb(length, i)
+        val = s - i * w + length - 1
+        if val >= length - 1:
+            res += sign * comb_l_i * math.comb(val, length - 1)
     return res
 
 
-def _constant_sum_encode(msg: bytes, l: int, w: int) -> list:
-    s = (l * (w - 1)) // 2
-    total = _get_D(l, s, w)
+def _constant_sum_encode(msg: bytes, length: int, w: int) -> list:
+    s = (length * (w - 1)) // 2
+    total = _get_D(length, s, w)
 
     x = int.from_bytes(msg, "big") % total
-    v = [0] * l
+    v = [0] * length
     current_sum = s
 
-    for i in range(l, 0, -1):
+    for i in range(length, 0, -1):
         chosen = min(w - 1, current_sum)
         for j in range(min(w - 1, current_sum) + 1):
             count = _get_D(i - 1, current_sum - j, w)
@@ -51,7 +51,6 @@ def _constant_sum_encode(msg: bytes, l: int, w: int) -> list:
 
 
 def get_len(n: int, w: int) -> int:
-
     return math.ceil((8 * n) / _log_w(w))
 
 
