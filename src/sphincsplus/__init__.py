@@ -1,4 +1,4 @@
-from . import (adrs, fors, hash, merkle, sphincs, tree, wots)
+from . import (adrs, fors, merkle, sphincs, tree, wots)
 
 from .sphincs import (
     keygen,
