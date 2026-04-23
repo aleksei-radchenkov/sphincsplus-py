@@ -17,20 +17,41 @@ test_cases = [
 msg = b"Hello, World! and some more text"
 
 
-@pytest.mark.parametrize("test_case", test_cases, ids=lambda tc: tc.name)
-def test_sign_verify(test_case):
-    _, n, h, d, a, k, w = test_case
+@pytest.fixture(
+    params=[False, True],
+    ids=["no_merkle_cache", "with_merkle_cache"],
+)
+def use_cache(request):
+    return request.param
+
+
+def keygen(n, h, d, a, k, w, use_cache):
+    if use_cache:
+        cache: dict[tuple[int, int], bytes] = {}
+        sk, pk = sphincs.keygen(n, h, d, a, k, w, merkle_cache=cache)
+        return sk, pk, cache
     sk, pk = sphincs.keygen(n, h, d, a, k, w)
-    sig = sphincs.sign(msg, sk, n, h, d, a, k, w)
+    return sk, pk, None
+
+
+def sign(msg, sk, n, h, d, a, k, w, cache=None, rand=True):
+    return sphincs.sign(msg, sk, n, h, d, a, k, w, rand=rand, merkle_cache=cache)
+
+
+@pytest.mark.parametrize("test_case", test_cases, ids=lambda tc: tc.name)
+def test_sign_verify(test_case, use_cache):
+    _, n, h, d, a, k, w = test_case
+    sk, pk, cache = keygen(n, h, d, a, k, w, use_cache)
+    sig = sign(msg, sk, n, h, d, a, k, w, cache=cache)
 
     assert sphincs.verify(msg, sig, pk, n, h, d, a, k, w)
 
 
 @pytest.mark.parametrize("test_case", test_cases, ids=lambda tc: tc.name)
-def test_wrong_message_fail(test_case):
+def test_wrong_message_fail(test_case, use_cache):
     _, n, h, d, a, k, w = test_case
-    sk, pk = sphincs.keygen(n, h, d, a, k, w)
-    sig = sphincs.sign(msg, sk, n, h, d, a, k, w)
+    sk, pk, cache = keygen(n, h, d, a, k, w, use_cache)
+    sig = sign(msg, sk, n, h, d, a, k, w, cache=cache)
 
     wrong_msg = b"This is a bs message."
 
@@ -38,20 +59,20 @@ def test_wrong_message_fail(test_case):
 
 
 @pytest.mark.parametrize("test_case", test_cases, ids=lambda tc: tc.name)
-def test_wrong_pk_fail(test_case):
+def test_wrong_pk_fail(test_case, use_cache):
     _, n, h, d, a, k, w = test_case
-    sk, _ = sphincs.keygen(n, h, d, a, k, w)
-    sig = sphincs.sign(msg, sk, n, h, d, a, k, w)
+    sk, _, cache = keygen(n, h, d, a, k, w, use_cache)
+    sig = sign(msg, sk, n, h, d, a, k, w, cache=cache)
 
     assert not sphincs.verify(
         msg, sig, secrets.token_bytes(2 * n), n, h, d, a, k, w)
 
 
 @pytest.mark.parametrize("test_case", test_cases, ids=lambda tc: tc.name)
-def test_bad_sig_fail(test_case):
+def test_bad_sig_fail(test_case, use_cache):
     _, n, h, d, a, k, w = test_case
-    sk, pk = sphincs.keygen(n, h, d, a, k, w)
-    sig = sphincs.sign(msg, sk, n, h, d, a, k, w)
+    sk, pk, cache = keygen(n, h, d, a, k, w, use_cache)
+    sig = sign(msg, sk, n, h, d, a, k, w, cache=cache)
 
     sig_bad = bytearray(sig)
     sig_bad[0] ^= 0xaa
@@ -60,41 +81,41 @@ def test_bad_sig_fail(test_case):
 
 
 @pytest.mark.parametrize("test_case", test_cases, ids=lambda tc: tc.name)
-def test_deterministic(test_case):
+def test_deterministic(test_case, use_cache):
     _, n, h, d, a, k, w = test_case
-    sk, _ = sphincs.keygen(n, h, d, a, k, w)
+    sk, _, cache = keygen(n, h, d, a, k, w, use_cache)
 
-    sig1 = sphincs.sign(msg, sk, n, h, d, a, k, w, rand=False)
-    sig2 = sphincs.sign(msg, sk, n, h, d, a, k, w, rand=False)
+    sig1 = sign(msg, sk, n, h, d, a, k, w, rand=False, cache=cache)
+    sig2 = sign(msg, sk, n, h, d, a, k, w, rand=False, cache=cache)
 
     assert sig1 == sig2
 
 
 @pytest.mark.parametrize("test_case", test_cases, ids=lambda tc: tc.name)
-def test_random_different_fail(test_case):
+def test_random_different_fail(test_case, use_cache):
     _, n, h, d, a, k, w = test_case
-    sk, _ = sphincs.keygen(n, h, d, a, k, w)
+    sk, _, cache = keygen(n, h, d, a, k, w, use_cache)
 
-    sig1 = sphincs.sign(msg, sk, n, h, d, a, k, w, rand=True)
-    sig2 = sphincs.sign(msg, sk, n, h, d, a, k, w, rand=True)
+    sig1 = sign(msg, sk, n, h, d, a, k, w, rand=True, cache=cache)
+    sig2 = sign(msg, sk, n, h, d, a, k, w, rand=True, cache=cache)
 
     assert sig1 != sig2
 
 
 @pytest.mark.parametrize("test_case", test_cases, ids=lambda tc: tc.name)
-def test_random_verify(test_case):
+def test_random_verify(test_case, use_cache):
     _, n, h, d, a, k, w = test_case
-    sk, pk = sphincs.keygen(n, h, d, a, k, w)
+    sk, pk, cache = keygen(n, h, d, a, k, w, use_cache)
 
     for _ in range(3):
-        sig = sphincs.sign(msg, sk, n, h, d, a, k, w, rand=True)
+        sig = sign(msg, sk, n, h, d, a, k, w, rand=True, cache=cache)
         assert sphincs.verify(msg, sig, pk, n, h, d, a, k, w)
 
 
 @pytest.mark.parametrize("test_case", test_cases, ids=lambda tc: tc.name)
-def test_multiple(test_case):
+def test_multiple(test_case, use_cache):
     _, n, h, d, a, k, w = test_case
-    sk, pk = sphincs.keygen(n, h, d, a, k, w)
+    sk, pk, cache = keygen(n, h, d, a, k, w, use_cache)
 
     messages = [
         b"",
@@ -104,6 +125,6 @@ def test_multiple(test_case):
     ]
 
     for message in messages:
-        sig = sphincs.sign(message, sk, n, h, d, a, k, w)
+        sig = sign(message, sk, n, h, d, a, k, w, cache=cache)
 
         assert sphincs.verify(message, sig, pk, n, h, d, a, k, w)
