@@ -9,7 +9,6 @@ D = 2
 A = 4
 K = 4
 W = 16
-M = K * A + H
 
 msg = b"Hello, World! and some more text"
 
