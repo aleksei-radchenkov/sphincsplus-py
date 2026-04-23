@@ -1,4 +1,5 @@
 # Sphincs+Py
+Automated lint, unit tests, and benchmarking: 
 
 A python implementation of the Sphincs+ post-quantum signature scheme.
 
@@ -10,6 +11,7 @@ Install [Docker](https://www.docker.com/get-started/).
 
 ## Usage
 
+_TODO REWORD_
 n : the security parameter in bytes.
 w : the Winternitz parameter as defined in Section 3.1.
 h : the height of the hypertree as defined in Section 4.2.1.
@@ -61,6 +63,9 @@ docker build -t sphincsplus .
 docker run --rm sphincsplus pytest tests/ -q
 ```
 
+The status of the unit tests and linting on the main branch is currently
+![CI Status](https://github.com/aleksei-radchenkov/sphincsplus-py/actions/workflows/ci.yml/badge.svg).
+
 ## Benchmarking
 
 Execute the following command to perform benchmarking locally:
@@ -69,3 +74,5 @@ Execute the following command to perform benchmarking locally:
 docker build -t sphincsplus .
 docker run --rm sphincsplus pytest --benchmark-only
 ```
+
+The benchmarking also automatically runs on every push and PR, and it can be found in the _Test_ section of the _test_ job in each _ci_ workflow, and the recent runs can be found [here](https://github.com/aleksei-radchenkov/sphincsplus-py/actions/workflows/ci.yml).
