@@ -16,4 +16,5 @@ __all__ = [
     "tree",
     "verify",
     "wots",
+    "dgsp"
 ]
