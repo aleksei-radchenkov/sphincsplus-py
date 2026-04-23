@@ -1,5 +1,6 @@
-from .sphincs import keygen, sign, verify
 import code
+
+from .sphincs import keygen, sign, verify
 
 
 def main():

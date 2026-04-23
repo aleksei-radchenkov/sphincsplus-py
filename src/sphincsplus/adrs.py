@@ -95,7 +95,9 @@ def _adrs_new_base_adrs(layer: int, tree: int, addr_type: int):
     return out
 
 
-def _adrs_new_hash_adrs(layer: int, tree: int, keypair: int, chain: int, hash_idx: int) -> bytearray:
+def _adrs_new_hash_adrs(
+    layer: int, tree: int, keypair: int, chain: int, hash_idx: int
+) -> bytearray:
     out = _adrs_new_base_adrs(layer, tree, TYPE_WOTS_HASH)
     _adrs_set_keypair(out, keypair)
     _adrs_set_chain(out, chain)
@@ -117,7 +119,9 @@ def _adrs_new_tree_adrs(layer: int, tree: int, height: int, index: int) -> bytea
     return out
 
 
-def _adrs_new_fors_tree_adrs(layer: int, tree: int, keypair: int, height: int, index: int) -> bytearray:
+def _adrs_new_fors_tree_adrs(
+    layer: int, tree: int, keypair: int, height: int, index: int
+) -> bytearray:
     out = _adrs_new_base_adrs(layer, tree, TYPE_FORS_TREE)
     _adrs_set_keypair(out, keypair)
     _adrs_set_tree_height(out, height)
@@ -131,7 +135,9 @@ def _adrs_new_roots_adrs(layer: int, tree: int, keypair: int) -> bytearray:
     return out
 
 
-def _adrs_new_node_adrs(adrs: bytearray, addr_type: int, height: int, index: int) -> bytearray:
+def _adrs_new_node_adrs(
+    adrs: bytearray, addr_type: int, height: int, index: int
+) -> bytearray:
     out = bytearray(adrs)
 
     _adrs_set_type(out, addr_type)

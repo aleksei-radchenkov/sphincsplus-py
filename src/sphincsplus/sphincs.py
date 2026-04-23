@@ -1,9 +1,6 @@
 import secrets
 
-from . import adrs
-from . import fors
-from . import tree
-from . import wots
+from . import adrs, fors, tree, wots
 from .hash import _h_msg, _prf_msg
 
 
@@ -27,13 +24,13 @@ def digest_to_fors_and_idx(digest: bytes, k: int, a: int, h: int, d: int) -> tup
     idx_leaf_bytes_len = (height + 7) // 8
 
     off = 0
-    tmp_md = digest[off:off + md_bytes_len]
+    tmp_md = digest[off: off + md_bytes_len]
     off += md_bytes_len
 
-    tmp_idx_tree = digest[off:off + idx_tree_bytes_len]
+    tmp_idx_tree = digest[off: off + idx_tree_bytes_len]
     off += idx_tree_bytes_len
 
-    tmp_idx_leaf = digest[off:off + idx_leaf_bytes_len]
+    tmp_idx_leaf = digest[off: off + idx_leaf_bytes_len]
 
     md_int = _parse_bits(tmp_md, ka)
     idx_tree = _parse_bits(tmp_idx_tree, idx_tree_bits)
@@ -91,9 +88,9 @@ def sign(
     m = _digest_bytes_len(h, d, k, a)
 
     sk_seed = sk[0:n]
-    sk_prf = sk[n:2 * n]
-    pk_seed = sk[2 * n:3 * n]
-    pk_root = sk[3 * n:4 * n]
+    sk_prf = sk[n: 2 * n]
+    pk_seed = sk[2 * n: 3 * n]
+    pk_root = sk[3 * n: 4 * n]
 
     if rand:
         opt_rand = secrets.token_bytes(n)
@@ -114,16 +111,12 @@ def sign(
     )
 
     fors_pk = fors.fors_sig_to_pk(
-        (sig_leafs, sig_auth),
-        msg_chunk,
-        pk_seed,
-        bytearray(fors_adrs),
-        k,
-        a
+        (sig_leafs, sig_auth), msg_chunk, pk_seed, bytearray(fors_adrs), k, a
     )
 
     ht_sig = tree.hypertree_sign(
-        fors_pk, sk_seed, pk_seed, tree_idx, leaf_idx, h, d, n, w)
+        fors_pk, sk_seed, pk_seed, tree_idx, leaf_idx, h, d, n, w
+    )
 
     body_f = bytearray()
     for i in range(k):
@@ -162,7 +155,7 @@ def verify(
         return False
 
     pk_seed = pk[0:n]
-    pk_root = pk[n:2 * n]
+    pk_root = pk[n: 2 * n]
 
     r = sig[0:n]
     body = sig[n:]
@@ -192,12 +185,12 @@ def verify(
     o = 0
 
     for _ in range(k):
-        sig_leafs.append(fors_buf[o:o + n])
+        sig_leafs.append(fors_buf[o: o + n])
         o += n
         path = []
 
         for _ in range(a):
-            path.append(fors_buf[o:o + n])
+            path.append(fors_buf[o: o + n])
             o += n
 
         sig_auth.append(path)
@@ -217,13 +210,13 @@ def verify(
         wots_sig = []
 
         for _ in range(ell):
-            wots_sig.append(ht_buf[o:o + n])
+            wots_sig.append(ht_buf[o: o + n])
             o += n
 
         path = []
 
         for _ in range(height):
-            path.append(ht_buf[o:o + n])
+            path.append(ht_buf[o: o + n])
             o += n
 
         ht_sig.append((wots_sig, path))
@@ -237,7 +230,9 @@ def verify(
     adrs._adrs_set_keypair(fors_adrs, leaf_idx)
 
     fors_pk = fors.fors_sig_to_pk(
-        (sig_leafs, sig_auth), msg_chunk, pk_seed, fors_adrs, k, a)
+        (sig_leafs, sig_auth), msg_chunk, pk_seed, fors_adrs, k, a
+    )
 
     return tree.hypertree_verify(
-        fors_pk, ht_sig, pk_seed, pk_root, tree_idx, leaf_idx, h, d, n, w)
+        fors_pk, ht_sig, pk_seed, pk_root, tree_idx, leaf_idx, h, d, n, w
+    )

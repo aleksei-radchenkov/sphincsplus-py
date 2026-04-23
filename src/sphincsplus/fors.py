@@ -1,13 +1,6 @@
-from .adrs import (
-    TYPE_FORS_ROOTS,
-    TYPE_FORS_TREE,
-    _adrs_set_tree_height,
-    _adrs_set_tree_idx,
-    _adrs_set_type,
-    _adrs_get_tree_height,
-    _adrs_get_tree_idx
-)
-
+from .adrs import (TYPE_FORS_ROOTS, TYPE_FORS_TREE, _adrs_get_tree_height,
+                   _adrs_get_tree_idx, _adrs_set_tree_height,
+                   _adrs_set_tree_idx, _adrs_set_type)
 from .hash import _f, _h, _prf, _tl
 
 
@@ -31,7 +24,9 @@ def _msg_to_indices(msg: bytes, k: int, a: int) -> list:
     return idxs
 
 
-def fors_treehash(sk_seed: bytes, pk_seed: bytes, start: int, height: int, adrs: bytearray) -> bytes:
+def fors_treehash(
+    sk_seed: bytes, pk_seed: bytes, start: int, height: int, adrs: bytearray
+) -> bytes:
     assert start % (1 << height) == 0
 
     stack = []
@@ -68,7 +63,9 @@ def fors_treehash(sk_seed: bytes, pk_seed: bytes, start: int, height: int, adrs:
     return stack.pop()[0]
 
 
-def fors_pk_gen(sk_seed: bytes, pk_seed: bytes, adrs: bytearray, k: int, a: int) -> bytes:
+def fors_pk_gen(
+    sk_seed: bytes, pk_seed: bytes, adrs: bytearray, k: int, a: int
+) -> bytes:
     pk_adrs = bytearray(adrs)
     roots = []
 

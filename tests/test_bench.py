@@ -1,7 +1,10 @@
-import pytest
 import secrets
-from sphincsplus import keygen, sign, verify, wots, sphincs
 from typing import NamedTuple
+
+import pytest
+
+from sphincsplus import keygen, sign, sphincs, verify, wots
+
 
 class TestCase(NamedTuple):
     name: str
@@ -11,6 +14,7 @@ class TestCase(NamedTuple):
     a: int  # log(t)
     k: int
     w: int
+
 
 test_cases = [
     TestCase("low-sec-demo-CS", 16, 8, 2, 4, 4, 16),
@@ -22,14 +26,13 @@ test_cases = [
     TestCase("SPHINCS+-256f-CS", 32, 68, 17, 9, 35, 16),
 ]
 
+
 @pytest.mark.parametrize("tc", test_cases, ids=lambda tc: tc.name)
 def test_keygen(benchmark, tc):
     benchmark.pedantic(
-        keygen,
-        args=(tc.n, tc.h, tc.d, tc.a, tc.k, tc.w),
-        rounds=3,
-        warmup_rounds=1
+        keygen, args=(tc.n, tc.h, tc.d, tc.a, tc.k, tc.w), rounds=3, warmup_rounds=1
     )
+
 
 @pytest.mark.parametrize("tc", test_cases, ids=lambda tc: tc.name)
 def test_sign(benchmark, tc):
@@ -40,8 +43,9 @@ def test_sign(benchmark, tc):
         sign,
         args=(message, sk, tc.n, tc.h, tc.d, tc.a, tc.k, tc.w),
         rounds=3,
-        warmup_rounds=1
+        warmup_rounds=1,
     )
+
 
 @pytest.mark.parametrize("tc", test_cases, ids=lambda tc: tc.name)
 def test_verify(benchmark, tc):
@@ -57,5 +61,5 @@ def test_verify(benchmark, tc):
         args=(message, sig, pk, tc.n, tc.h, tc.d, tc.a, tc.k, tc.w),
         rounds=10,
         iterations=1,
-        warmup_rounds=1
+        warmup_rounds=1,
     )

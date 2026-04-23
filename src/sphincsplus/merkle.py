@@ -6,26 +6,14 @@
 # n - the length of messages/nodes in bytes
 # w - WOTS constant
 
-from .adrs import (
-    TYPE_TREE,
-    TYPE_WOTS_HASH,
-    _adrs_set_keypair,
-    _adrs_set_type,
-    _adrs_set_tree_height,
-    _adrs_set_tree_idx,
-)
-
+from .adrs import (TYPE_TREE, TYPE_WOTS_HASH, _adrs_set_keypair,
+                   _adrs_set_tree_height, _adrs_set_tree_idx, _adrs_set_type)
 from .hash import _h
-from .wots import (wots_gen_pk, wots_sign, wots_sig_to_pk)
+from .wots import wots_gen_pk, wots_sig_to_pk, wots_sign
 
 
 def _get_leaf_pk(
-    sk_seed: bytes,
-    pk_seed: bytes,
-    adrs: bytearray,
-    idx: int,
-    n: int,
-    w: int
+    sk_seed: bytes, pk_seed: bytes, adrs: bytearray, idx: int, n: int, w: int
 ) -> bytes:
     leaf_adrs = bytearray(adrs)
 
@@ -87,8 +75,9 @@ def tree_hash(
 
 
 # Calculates the root of  the binary hash tree
-def merkle_pk_gen(sk_seed: bytes, pk_seed: bytes, adrs:  bytearray, height:
-                  int, n: int, w: int) -> bytes:
+def merkle_pk_gen(
+    sk_seed: bytes, pk_seed: bytes, adrs: bytearray, height: int, n: int, w: int
+) -> bytes:
     return tree_hash(sk_seed, pk_seed, adrs, 0, height, n, w)
 
 
