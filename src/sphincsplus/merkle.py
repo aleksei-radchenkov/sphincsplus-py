@@ -45,8 +45,14 @@ def tree_hash(
     height: int,
     n: int,
     w: int,
+    merkle_cache: dict | None = None,
 ) -> bytes:
     assert start_idx % (1 << height) == 0
+
+    key = (start_idx, height)
+    # cache is only passed in if layer = d - 1, so merkle_cache stays constant in other layers
+    if merkle_cache is not None and key in merkle_cache:
+        return merkle_cache[key]
 
     stack = []
 
@@ -79,6 +85,11 @@ def tree_hash(
 
             node_height += 1
 
+        if merkle_cache is not None:
+            leftmost = node_index << node_height
+            # cache the node (i.e. hash) covering this node’s leaf span
+            merkle_cache[(leftmost, node_height)] = node
+
         stack.append((node, node_height, node_index))
 
     # only root must remain
@@ -88,8 +99,8 @@ def tree_hash(
 
 # Calculates the root of  the binary hash tree
 def merkle_pk_gen(sk_seed: bytes, pk_seed: bytes, adrs:  bytearray, height:
-                  int, n: int, w: int) -> bytes:
-    return tree_hash(sk_seed, pk_seed, adrs, 0, height, n, w)
+                  int, n: int, w: int, merkle_cache: dict | None = None) -> bytes:
+    return tree_hash(sk_seed, pk_seed, adrs, 0, height, n, w, merkle_cache)
 
 
 # Returns the Merkle (XMSS) signature
@@ -102,6 +113,7 @@ def merkle_sign(
     height: int,
     n: int,
     w: int,
+    merkle_cache: dict | None = None,
 ) -> list[list[bytes]]:
 
     wots_adrs = bytearray(adrs)
@@ -126,6 +138,7 @@ def merkle_sign(
                 j,
                 n,
                 w,
+                merkle_cache=merkle_cache
             )
         )
 
