@@ -12,18 +12,17 @@ class TestCase(NamedTuple):
     a: int  # log(t)
     k: int
     w: int
-    m: int
 
 
 # these m values are wrong - maybe look here https://nvlpubs.nist.gov/nistpubs/fips/nist.fips.205.pdf
 test_cases = [
-    TestCase("low security demo", 16, 8, 2, 4, 4, 16, 24),
-    TestCase("SPHINCS+-128s", 16, 63, 7, 12, 14, 16, 133),
-    TestCase("SPHINCS+-128f", 16, 66, 22, 6, 33, 16, 128),
-    TestCase("SPHINCS+-192s", 24, 63, 7, 14, 17, 16, 193),
-    TestCase("SPHINCS+-192f", 24, 66, 22, 8, 33, 16, 194),
-    TestCase("SPHINCS+-256s", 32, 64, 8, 14, 22, 16, 255),
-    TestCase("SPHINCS+-256f", 32, 68, 17, 9, 35, 16, 255),
+    TestCase("low security demo", 16, 8, 2, 4, 4, 16),
+    TestCase("SPHINCS+-128s", 16, 63, 7, 12, 14, 16),
+    TestCase("SPHINCS+-128f", 16, 66, 22, 6, 33, 16),
+    TestCase("SPHINCS+-192s", 24, 63, 7, 14, 17, 16),
+    TestCase("SPHINCS+-192f", 24, 66, 22, 8, 33, 16),
+    TestCase("SPHINCS+-256s", 32, 64, 8, 14, 22, 16),
+    TestCase("SPHINCS+-256f", 32, 68, 17, 9, 35, 16),
 ]
 
 

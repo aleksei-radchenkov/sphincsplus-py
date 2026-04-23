@@ -1,3 +1,5 @@
+#!/bin/python3
+
 from sphincsplus import keygen, sign, verify
 
 n, h, d, a, k, w, m = 16, 8, 2, 4, 4, 16, 24

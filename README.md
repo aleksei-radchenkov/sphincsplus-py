@@ -1,12 +1,15 @@
 # Sphincs+Py
+
 A python implementation of the Sphincs+ post-quantum signature scheme.
 
 The original paper can be found here: [The SPHINCS+ Signature Framework](https://eprint.iacr.org/2019/1086.pdf).
 
 ## Installation
+
 Install [Docker](https://www.docker.com/get-started/).
 
 ## Usage
+
 n : the security parameter in bytes.
 w : the Winternitz parameter as defined in Section 3.1.
 h : the height of the hypertree as defined in Section 4.2.1.
@@ -21,7 +24,9 @@ Do we need to expose any additional functions and explain them for usage? I thin
 It is possible to run the program in two ways: through an interactive Python Console, and through a python script.
 
 ### Interactive Python Console
+
 To start the console, use the following command:
+
 ```bash
 docker build -t sphincsplus . && docker run -it sphincsplus
 ```
@@ -40,24 +45,27 @@ b"9h\xefCCv\xa5\xd8\x19|'\x91M\xe11\xfd\xe6\xdd\xdbP\xfbK\xb7I\x03\xeb*\r\xe9\xd
 ```
 
 ### Python Script
+
 You can also run code in [demo.py](/demo.py). After you finish writing the code, you can run it using the following command.
 
 ```bash
 docker build -t sphincsplus . && docker run -it sphincsplus python3 demo.py
 ```
+
 ## Tests
+
 Execute the following commands to run the tests:
+
 ```bash
 docker build -t sphincsplus .
 docker run --rm sphincsplus pytest tests/ -q
 ```
 
 ## Benchmarking
+
 Execute the following command to perform benchmarking locally:
+
 ```bash
 docker build -t sphincsplus .
 docker run --rm sphincsplus pytest --benchmark-only
 ```
-
-
-
