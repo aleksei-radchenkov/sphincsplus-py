@@ -1,5 +1,4 @@
-from sphincsplus import sphincs, tree
-
+from sphincsplus import sphincs
 import pytest
 import secrets
 from collections import namedtuple
