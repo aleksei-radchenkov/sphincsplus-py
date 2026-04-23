@@ -2,6 +2,7 @@ from sphincsplus import (wots, adrs)
 
 import pytest
 import secrets
+import os
 
 
 @pytest.fixture
@@ -111,12 +112,32 @@ def test_sig_fixed(keypair_fixed):
     adrs, pk, fixed_sk_seed, fixed_pk_seed, n, w = keypair_fixed
 
     fixed_msg = b"A" * n
-    sig = wots.wots_sign(fixed_msg, fixed_sk_seed, fixed_pk_seed, adrs, n, w)
-    with open("./tests/expected_outputs/fixed_wots_signature.txt", "rb") as f:
-        fixed_sig = f.read()
+    # wots_sign returns a list of byte strings
+    sig_list = wots.wots_sign(fixed_msg, fixed_sk_seed, fixed_pk_seed, adrs, n, w)
+    sig_bytes = b''.join(sig_list) 
+    
+    path = "./tests/expected_outputs/fixed_wots_signature.txt"
+    
+    # 1. Create file if missing
+    if not os.path.exists(path):
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+        with open(path, "wb") as f:
+            f.write(sig_bytes)
 
-    assert fixed_sig == b''.join(sig)
-    assert wots.wots_verify(sig, fixed_msg, fixed_pk_seed, pk, adrs, n, w)
+    # 2. Read the "golden" signature from disk
+    with open(path, "rb") as f:
+        stored_sig_bytes = f.read()
+
+    # 3. Reconstruct the list format for wots_verify
+    # We split the bytes back into chunks of size 'n'
+    reconstructed_sig = [stored_sig_bytes[i:i+n] for i in range(0, len(stored_sig_bytes), n)]
+
+    # 4. Assertions
+    assert stored_sig_bytes == sig_bytes, "Signature mismatch against stored file"
+    assert len(sig_bytes) == 2048, f"Expected 2048 bytes, got {len(sig_bytes)}"
+    
+    # Verify using the data we just read from the file
+    assert wots.wots_verify(reconstructed_sig, fixed_msg, fixed_pk_seed, pk, adrs, n, w)
 
 
 @pytest.mark.parametrize("keypair_random", [(16, 16), (24, 16), (32, 16)], indirect=True)

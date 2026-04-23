@@ -1,8 +1,7 @@
 import pytest
-from sphincsplus import keygen, sign, verify
+import secrets
+from sphincsplus import keygen, sign, verify, wots, sphincs
 from typing import NamedTuple
-import random
-
 
 class TestCase(NamedTuple):
     name: str
@@ -13,18 +12,15 @@ class TestCase(NamedTuple):
     k: int
     w: int
 
-
-# these m values are wrong - maybe look here https://nvlpubs.nist.gov/nistpubs/fips/nist.fips.205.pdf
 test_cases = [
-    TestCase("low security demo", 16, 8, 2, 4, 4, 16),
-    TestCase("SPHINCS+-128s", 16, 63, 7, 12, 14, 16),
-    TestCase("SPHINCS+-128f", 16, 66, 22, 6, 33, 16),
-    TestCase("SPHINCS+-192s", 24, 63, 7, 14, 17, 16),
-    TestCase("SPHINCS+-192f", 24, 66, 22, 8, 33, 16),
-    TestCase("SPHINCS+-256s", 32, 64, 8, 14, 22, 16),
-    TestCase("SPHINCS+-256f", 32, 68, 17, 9, 35, 16),
+    TestCase("low-sec-demo-CS", 16, 8, 2, 4, 4, 16),
+    TestCase("SPHINCS+-128s-CS", 16, 63, 7, 12, 14, 16),
+    TestCase("SPHINCS+-128f-CS", 16, 66, 22, 6, 33, 16),
+    TestCase("SPHINCS+-192s-CS", 24, 63, 7, 14, 17, 16),
+    TestCase("SPHINCS+-192f-CS", 24, 66, 22, 8, 33, 16),
+    TestCase("SPHINCS+-256s-CS", 32, 64, 8, 14, 22, 16),
+    TestCase("SPHINCS+-256f-CS", 32, 68, 17, 9, 35, 16),
 ]
-
 
 @pytest.mark.parametrize("tc", test_cases, ids=lambda tc: tc.name)
 def test_keygen(benchmark, tc):
@@ -35,31 +31,31 @@ def test_keygen(benchmark, tc):
         warmup_rounds=1
     )
 
-
 @pytest.mark.parametrize("tc", test_cases, ids=lambda tc: tc.name)
 def test_sign(benchmark, tc):
     sk, _ = keygen(tc.n, tc.h, tc.d, tc.a, tc.k, tc.w)
+    message = secrets.token_bytes(32)
 
     benchmark.pedantic(
         sign,
-        args=(random.randbytes(32), sk, tc.n, tc.h, tc.d, tc.a, tc.k, tc.w),
+        args=(message, sk, tc.n, tc.h, tc.d, tc.a, tc.k, tc.w),
         rounds=3,
         warmup_rounds=1
     )
 
-
 @pytest.mark.parametrize("tc", test_cases, ids=lambda tc: tc.name)
 def test_verify(benchmark, tc):
     sk, pk = keygen(tc.n, tc.h, tc.d, tc.a, tc.k, tc.w)
-
-    message = random.randbytes(32)
-
+    message = secrets.token_bytes(32)
     sig = sign(message, sk, tc.n, tc.h, tc.d, tc.a, tc.k, tc.w)
+
+    expected_len = sphincs.sig_bytes_len(tc.n, tc.h, tc.d, tc.a, tc.k, tc.w)
+    assert len(sig) == expected_len
 
     benchmark.pedantic(
         verify,
         args=(message, sig, pk, tc.n, tc.h, tc.d, tc.a, tc.k, tc.w),
         rounds=10,
-        iterations=10,
+        iterations=1,
         warmup_rounds=1
     )
