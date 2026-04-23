@@ -12,22 +12,30 @@ W = 16
 
 msg = b"Hello, World! and some more text"
 
-
-@pytest.fixture
-def keypair():
-    return sphincs.keygen(N, H, D, A, K, W)
-
+@pytest.fixture(
+    params=[False, True],
+    ids=["no_cache", "has_cache"],
+)
+def keypair(request):
+    if request.param:
+        cache = {}
+        sk, pk = sphincs.keygen(
+            N, H, D, A, K, W, merkle_cache=cache
+        )
+        return sk, pk, cache
+    sk, pk = sphincs.keygen(N, H, D, A, K, W)
+    return sk, pk, None
 
 def test_sign_verify(keypair):
-    sk, pk = keypair
-    sig = sphincs.sign(msg, sk, N, H, D, A, K, W)
+    sk, pk, cache = keypair
+    sig = sphincs.sign(msg, sk, N, H, D, A, K, W, merkle_cache=cache)
 
     assert sphincs.verify(msg, sig, pk, N, H, D, A, K, W)
 
 
 def test_wrong_message_fail(keypair):
-    sk, pk = keypair
-    sig = sphincs.sign(msg, sk, N, H, D, A, K, W)
+    sk, pk, cache = keypair
+    sig = sphincs.sign(msg, sk, N, H, D, A, K, W, merkle_cache=cache)
 
     wrong_msg = b"This is a bs message."
 
@@ -35,16 +43,16 @@ def test_wrong_message_fail(keypair):
 
 
 def test_wrong_pk_fail(keypair):
-    sk, _ = keypair
-    sig = sphincs.sign(msg, sk, N, H, D, A, K, W)
+    sk, _, cache = keypair
+    sig = sphincs.sign(msg, sk, N, H, D, A, K, W, merkle_cache=cache)
 
     assert not sphincs.verify(
         msg, sig, secrets.token_bytes(2 * N), N, H, D, A, K, W)
 
 
 def test_bad_sig_fail(keypair):
-    sk, pk = keypair
-    sig = sphincs.sign(msg, sk, N, H, D, A, K, W)
+    sk, pk, cache = keypair
+    sig = sphincs.sign(msg, sk, N, H, D, A, K, W, merkle_cache=cache)
 
     sig_bad = bytearray(sig)
     sig_bad[0] &= 0xaa
@@ -53,33 +61,33 @@ def test_bad_sig_fail(keypair):
 
 
 def test_deterministic(keypair):
-    sk, _ = keypair
+    sk, _, cache = keypair
 
-    sig1 = sphincs.sign(msg, sk, N, H, D, A, K, W, rand=False)
-    sig2 = sphincs.sign(msg, sk, N, H, D, A, K, W, rand=False)
+    sig1 = sphincs.sign(msg, sk, N, H, D, A, K, W, rand=False, merkle_cache=cache)
+    sig2 = sphincs.sign(msg, sk, N, H, D, A, K, W, rand=False, merkle_cache=cache)
 
     assert sig1 == sig2
 
 
 def test_random_different_fail(keypair):
-    sk, _ = keypair
+    sk, _, cache = keypair
 
-    sig1 = sphincs.sign(msg, sk, N, H, D, A, K, W, rand=True)
-    sig2 = sphincs.sign(msg, sk, N, H, D, A, K, W, rand=True)
+    sig1 = sphincs.sign(msg, sk, N, H, D, A, K, W, rand=True, merkle_cache=cache)
+    sig2 = sphincs.sign(msg, sk, N, H, D, A, K, W, rand=True, merkle_cache=cache)
 
     assert sig1 != sig2
 
 
 def test_random_verify(keypair):
-    sk, pk = keypair
+    sk, pk, cache = keypair
 
     for _ in range(3):
-        sig = sphincs.sign(msg, sk, N, H, D, A, K, W, rand=True)
+        sig = sphincs.sign(msg, sk, N, H, D, A, K, W, rand=True, merkle_cache=cache)
         assert sphincs.verify(msg, sig, pk, N, H, D, A, K, W)
 
 
 def test_multiple(keypair):
-    sk, pk = keypair
+    sk, pk, cache = keypair
 
     messages = [
         b"",
@@ -89,6 +97,6 @@ def test_multiple(keypair):
     ]
 
     for m in messages:
-        sig = sphincs.sign(m, sk, N, H, D, A, K, W)
+        sig = sphincs.sign(m, sk, N, H, D, A, K, W, merkle_cache=cache)
 
         assert sphincs.verify(m, sig, pk, N, H, D, A, K, W)

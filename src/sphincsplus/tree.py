@@ -9,13 +9,13 @@ from .merkle import merkle_pk_gen, merkle_sig_to_pk, merkle_sign
 
 # Generates the hypertree public key (hypertree root), which is used to generate all
 # the WOTS+ private keys within the hypertree.
-def hypertree_pk_gen(sk_seed: bytes, pk_seed: bytes, h: int, d: int, n: int, w: int) -> bytes:
+def hypertree_pk_gen(sk_seed: bytes, pk_seed: bytes, h: int, d: int, n: int, w: int, merkle_cache: dict | None = None) -> bytes:
     adrs = _adrs_new()
 
     _adrs_set_layer(adrs, d - 1)
     _adrs_set_tree(adrs, 0)
 
-    return merkle_pk_gen(sk_seed, pk_seed, adrs, h // d, n, w)
+    return merkle_pk_gen(sk_seed, pk_seed, adrs, h // d, n, w, merkle_cache)
 
 # Generates the hypertree signature, made of (d) merkle signatures, each linking
 # one layer of the hypertree from the bottom leaf up to the top root.
@@ -31,6 +31,7 @@ def hypertree_sign(
     d: int,
     n: int,
     w: int,
+    merkle_cache: dict | None = None,
 ) -> list:
     height = h // d
     ht_sig = []
@@ -40,9 +41,11 @@ def hypertree_sign(
     _adrs_set_layer(adrs, 0)
     _adrs_set_tree(adrs, tree_idx)
 
+    # if d > 1, this first sign occurs at layer 0. Only cache if d = 1, i.e. top layer.
     sig = merkle_sign(msg, sk_seed,
                       pk_seed, adrs, leaf_idx,
-                      height, n, w)
+                      height, n, w,
+                      merkle_cache=merkle_cache if d == 1 else None)
 
     ht_sig.append(sig)
 
@@ -62,7 +65,8 @@ def hypertree_sign(
             curr_msg, sk_seed,
             pk_seed, adrs,
             curr_leaf,
-            height, n, w
+            height, n, w,
+            merkle_cache=merkle_cache if i == d - 1 else None
         )
 
         ht_sig.append(sig)
