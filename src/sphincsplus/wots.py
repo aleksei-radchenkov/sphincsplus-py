@@ -1,3 +1,13 @@
+# WOTS+ One-Time Signature Scheme
+#
+# Parameters:
+#
+# n - security paramter (length of message, keys and signature)
+# w - Winternitz parameter (in set of {4, 16, 256})
+#
+# WOTS+ generates one-time signatures by iteratively hashing message into chains
+# of hash outputs and revealing parts of it to create a signature.
+
 import math
 
 from .adrs import (
@@ -22,6 +32,8 @@ def _get_len_1(n: int, w: int) -> int:
 
 def _get_len_2(n: int, w: int) -> int:
     return math.floor(math.log2(_get_len_1(n, w) * (w - 1)) / _log_w(w)) + 1
+
+# len - the number of n-byte-string elements in WOTS+ keys and signature.
 
 
 def get_len(n: int, w: int) -> int:
@@ -49,28 +61,30 @@ def _base_w(msg: bytes, w: int, out_len: int) -> list:
 
 def _int_to_base_w(inp: int, w: int, out_len: int) -> list:
     out = []
+
     for i in range(out_len):
         bits = _log_w(w) * (out_len - i - 1)
         out.append((inp >> bits) & (w - 1))
+
     return out
 
 
+# Computes an iteration of F on an n-byte input.
 def chain(msg: bytes, start: int, steps: int, pk_seed: bytes, adrs: bytearray, w: int) -> bytes | None:
-    if start + steps > w - 1:
-        return None
+    assert start + steps <= w - 1
+
     if steps == 0:
         return msg
 
-    assert (start + steps) <= (w - 1)
-
-    x = msg
+    tmp = msg
 
     for j in range(steps):
         new_adrs = bytearray(adrs)
         _adrs_set_hash(new_adrs, start + j)
-        x = _f(pk_seed, new_adrs, x)
 
-    return x
+        tmp = _f(pk_seed, new_adrs, tmp)
+
+    return tmp
 
 
 def _gen_sk(sk_seed: bytes, adrs: bytearray, n: int, w: int) -> list:
@@ -114,9 +128,11 @@ def _checksum(msg_w: list, w: int, n: int) -> list:
 
     len_2_bytes = math.ceil((len_2 * log_w) / 8)
     s_bytes = int(s).to_bytes(len_2_bytes, "big")
+
     return _base_w(s_bytes, w, len_2)
 
 
+# Generates the WOTS+ one-time signature
 def wots_sign(msg: bytes, sk_seed: bytes, pk_seed: bytes, adrs: bytearray, n: int, w: int) -> list:
     msg_w = _base_w(msg, w, _get_len_1(n, w))
     csum = _checksum(msg_w, w, n)
@@ -137,6 +153,7 @@ def wots_sign(msg: bytes, sk_seed: bytes, pk_seed: bytes, adrs: bytearray, n: in
     return sig
 
 
+# Computes the WOTS+ public key from signature
 def wots_sig_to_pk(sig: list, msg: bytes, pk_seed: bytes, adrs: bytearray, n: int, w: int) -> bytes:
     msg_w = _base_w(msg, w, _get_len_1(n, w))
     csum = _checksum(msg_w, w, n)

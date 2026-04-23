@@ -74,7 +74,7 @@ def fors_pk_gen(sk_seed: bytes, pk_seed: bytes, adrs: bytearray, k: int, a: int)
 
     for i in range(k):
         roots.append(
-            fors_treehash(sk_seed, pk_seed, i * (1 << a), a, pk_adrs)
+            fors_treehash(sk_seed, pk_seed, i * (1 << a), a, bytearray(pk_adrs))
         )
 
     _adrs_set_type(pk_adrs, TYPE_FORS_ROOTS)

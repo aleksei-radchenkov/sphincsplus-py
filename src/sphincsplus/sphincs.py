@@ -109,8 +109,18 @@ def sign(
     adrs._adrs_set_tree(fors_adrs, tree_idx)
     adrs._adrs_set_keypair(fors_adrs, leaf_idx)
 
-    sig_leafs, sig_auth = fors.fors_sign(msg_chunk, sk_seed, pk_seed, fors_adrs, k, a)
-    fors_pk = fors.fors_pk_gen(sk_seed, pk_seed, fors_adrs, k, a)
+    sig_leafs, sig_auth = fors.fors_sign(
+        msg_chunk, sk_seed, pk_seed, bytearray(fors_adrs), k, a
+    )
+
+    fors_pk = fors.fors_sig_to_pk(
+        (sig_leafs, sig_auth),
+        msg_chunk,
+        pk_seed,
+        bytearray(fors_adrs),
+        k,
+        a
+    )
 
     ht_sig = tree.hypertree_sign(
         fors_pk, sk_seed, pk_seed, tree_idx, leaf_idx, h, d, n, w)

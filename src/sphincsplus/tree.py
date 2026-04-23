@@ -7,6 +7,8 @@ from .adrs import (
 from .merkle import merkle_pk_gen, merkle_sig_to_pk, merkle_sign
 
 
+# Generates the hypertree public key (hypertree root), which is used to generate all
+# the WOTS+ private keys within the hypertree.
 def hypertree_pk_gen(sk_seed: bytes, pk_seed: bytes, h: int, d: int, n: int, w: int) -> bytes:
     adrs = _adrs_new()
 
@@ -14,6 +16,9 @@ def hypertree_pk_gen(sk_seed: bytes, pk_seed: bytes, h: int, d: int, n: int, w: 
     _adrs_set_tree(adrs, 0)
 
     return merkle_pk_gen(sk_seed, pk_seed, adrs, h // d, n, w)
+
+# Generates the hypertree signature, made of (d) merkle signatures, each linking
+# one layer of the hypertree from the bottom leaf up to the top root.
 
 
 def hypertree_sign(
@@ -70,6 +75,8 @@ def hypertree_sign(
     return ht_sig
 
 
+# Verifies the hyper tree signature by reconstructing the root node, by
+# iteratively verifying the merkle signatures up to layer d-1.
 def hypertree_verify(
     msg: bytes,
     ht_sig: list,

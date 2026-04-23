@@ -1,7 +1,3 @@
-# Hash Function Address Scheme (ADRS)
-# (Defined in https://sphincs.org/data/sphincs+-round3-specification.pdf, 2.7.3
-# pg. 11-13)
-#
 # ADRS is a 32-byte value that follows the following structure:
 # layer (hypertree) address (4 bytes) -> tree address (12 bytes) -> type (4
 # bytes) -> type-specific fields (12 bytes, each field is 4 bytes, padded if too small)
