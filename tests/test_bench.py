@@ -31,7 +31,7 @@ test_cases = [
 def test_keygen(benchmark, tc):
     benchmark.pedantic(
         keygen,
-        args=(tc.n, tc.h, tc.d, tc.a, tc.k, tc.w, tc.m),
+        args=(tc.n, tc.h, tc.d, tc.a, tc.k, tc.w),
         rounds=3,
         warmup_rounds=1
     )
@@ -39,11 +39,11 @@ def test_keygen(benchmark, tc):
 
 @pytest.mark.parametrize("tc", test_cases, ids=lambda tc: tc.name)
 def test_sign(benchmark, tc):
-    sk, _ = keygen(tc.n, tc.h, tc.d, tc.a, tc.k, tc.w, tc.m)
+    sk, _ = keygen(tc.n, tc.h, tc.d, tc.a, tc.k, tc.w)
 
     benchmark.pedantic(
         sign,
-        args=(random.randbytes(32), sk, tc.n, tc.h, tc.d, tc.a, tc.k, tc.w, tc.m),
+        args=(random.randbytes(32), sk, tc.n, tc.h, tc.d, tc.a, tc.k, tc.w),
         rounds=3,
         warmup_rounds=1
     )
@@ -51,15 +51,15 @@ def test_sign(benchmark, tc):
 
 @pytest.mark.parametrize("tc", test_cases, ids=lambda tc: tc.name)
 def test_verify(benchmark, tc):
-    sk, pk = keygen(tc.n, tc.h, tc.d, tc.a, tc.k, tc.w, tc.m)
+    sk, pk = keygen(tc.n, tc.h, tc.d, tc.a, tc.k, tc.w)
 
     message = random.randbytes(32)
 
-    sig = sign(message, sk, tc.n, tc.h, tc.d, tc.a, tc.k, tc.w, tc.m)
+    sig = sign(message, sk, tc.n, tc.h, tc.d, tc.a, tc.k, tc.w)
 
     benchmark.pedantic(
         verify,
-        args=(message, sig, pk, tc.n, tc.h, tc.d, tc.a, tc.k, tc.w, tc.m),
+        args=(message, sig, pk, tc.n, tc.h, tc.d, tc.a, tc.k, tc.w),
         rounds=10,
         iterations=10,
         warmup_rounds=1

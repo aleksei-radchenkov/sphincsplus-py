@@ -72,13 +72,14 @@ def tree_hash(
             tree_adrs = bytearray(adrs)
             _adrs_set_type(tree_adrs, TYPE_TREE)
             _adrs_set_tree_height(tree_adrs, node_height + 1)
-            _adrs_set_tree_idx(tree_adrs, len(stack))
+            node_index = (node_index - 1) // 2
+            _adrs_set_tree_idx(tree_adrs, node_index)
 
             node = _h(pk_seed, tree_adrs, left_node, node)
 
             node_height += 1
 
-        stack.append((node, node_height, len(stack)))
+        stack.append((node, node_height, node_index))
 
     # only root must remain
     assert len(stack) == 1

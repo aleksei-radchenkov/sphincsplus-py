@@ -71,7 +71,8 @@ def _int_to_base_w(inp: int, w: int, out_len: int) -> list:
 
 # Computes an iteration of F on an n-byte input.
 def chain(msg: bytes, start: int, steps: int, pk_seed: bytes, adrs: bytearray, w: int) -> bytes | None:
-    assert start + steps <= w - 1
+    if start + steps > w - 1:
+        return None
 
     if steps == 0:
         return msg
