@@ -51,7 +51,7 @@ def tree_hash(
 
     key = (start_idx, height)
     # cache is only passed in if layer = d - 1, so merkle_cache stays constant in other layers
-    if merkle_cache and key in merkle_cache:
+    if merkle_cache is not None and key in merkle_cache:
         return merkle_cache[key]
 
     stack = []
@@ -87,6 +87,7 @@ def tree_hash(
 
         if merkle_cache is not None:
             leftmost = node_index << node_height
+            # cache the node (i.e. hash) covering this node’s leaf span
             merkle_cache[(leftmost, node_height)] = node
 
         stack.append((node, node_height, node_index))
