@@ -3,14 +3,15 @@ from sphincsplus import sphincs
 import pytest
 import secrets
 
-N = 16
+N = 32
 H = 8
 D = 2
-A = 4
-K = 4
+A = 14
+K = 22
 W = 16
 
 msg = b"Hello, World! and some more text"
+
 
 @pytest.fixture(
     params=[False, True],
@@ -25,6 +26,7 @@ def keypair(request):
         return sk, pk, cache
     sk, pk = sphincs.keygen(N, H, D, A, K, W)
     return sk, pk, None
+
 
 def test_sign_verify(keypair):
     sk, pk, cache = keypair

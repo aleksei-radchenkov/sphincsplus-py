@@ -9,7 +9,8 @@ from .merkle import merkle_pk_gen, merkle_sig_to_pk, merkle_sign
 
 # Generates the hypertree public key (hypertree root), which is used to generate all
 # the WOTS+ private keys within the hypertree.
-def hypertree_pk_gen(sk_seed: bytes, pk_seed: bytes, h: int, d: int, n: int, w: int, merkle_cache: dict | None = None) -> bytes:
+def hypertree_pk_gen(sk_seed: bytes, pk_seed: bytes, h: int, d: int, n: int, w: int,
+                     merkle_cache: dict | None = None) -> bytes:
     adrs = _adrs_new()
 
     _adrs_set_layer(adrs, d - 1)

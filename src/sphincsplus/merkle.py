@@ -50,9 +50,8 @@ def tree_hash(
     assert start_idx % (1 << height) == 0
 
     key = (start_idx, height)
-    # cache is only passed in if layer = d - 1, so cache stays constant in other layers
+    # cache is only passed in if layer = d - 1, so merkle_cache stays constant in other layers
     if merkle_cache and key in merkle_cache:
-        print("hit!")
         return merkle_cache[key]
 
     stack = []
@@ -87,7 +86,6 @@ def tree_hash(
             node_height += 1
 
         if merkle_cache is not None:
-            print("caching!")
             leftmost = node_index << node_height
             merkle_cache[(leftmost, node_height)] = node
 
