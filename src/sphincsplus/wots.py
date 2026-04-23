@@ -44,7 +44,7 @@ def _constant_sum_encode(msg: bytes, length: int, w: int) -> list:
                 break
             x -= count
 
-        v[l - i] = chosen
+        v[length - i] = chosen
         current_sum -= chosen
 
     return v
