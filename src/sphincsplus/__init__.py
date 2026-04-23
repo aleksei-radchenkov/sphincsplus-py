@@ -1,9 +1,5 @@
-from . import adrs
-from . import fors
-from . import merkle
-from . import sphincs
-from . import tree
-from . import wots
+from . import (adrs, fors, hash, merkle, sphincs, tree, wots)
+
 from .sphincs import (
     keygen,
     sign,

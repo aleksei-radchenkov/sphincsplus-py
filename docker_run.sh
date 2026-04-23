@@ -7,4 +7,9 @@ docker run sphincsplus
 
 flake8 .
 
-# add benchmarks later or whatever))
+docker build -t sphincsplus .
+docker run --rm sphincsplus pytest tests/ -q
+
+
+docker build -t sphincsplus .
+docker run --rm sphincsplus pytest --benchmark-only
