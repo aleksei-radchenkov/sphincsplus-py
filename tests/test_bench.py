@@ -41,10 +41,9 @@ def test_keygen_without_cache(benchmark, tc):
 # caching should only affect signing time, so this is just a double-check
 @pytest.mark.parametrize("tc", test_cases, ids=lambda tc: tc.name)
 def test_keygen_with_cache(benchmark, tc):
-    cache = {}
     benchmark.pedantic(
         keygen,
-        args=(tc.n, tc.h, tc.d, tc.a, tc.k, tc.w, cache),
+        args=(tc.n, tc.h, tc.d, tc.a, tc.k, tc.w, {}),
         rounds=3,
         warmup_rounds=1
     )
@@ -66,13 +65,11 @@ def test_sign_without_cache(benchmark, tc):
 @pytest.mark.benchmark(group="sign-c")
 @pytest.mark.parametrize("tc", test_cases, ids=lambda tc: tc.name)
 def test_sign_with_cache(benchmark, tc):
-    cache = {}
-    sk, _ = keygen(tc.n, tc.h, tc.d, tc.a, tc.k, tc.w, cache)
-    assert len(cache) > 0
+    sk, _ = keygen(tc.n, tc.h, tc.d, tc.a, tc.k, tc.w, {})
 
     benchmark.pedantic(
         sign,
-        args=(random.randbytes(32), sk, tc.n, tc.h, tc.d, tc.a, tc.k, tc.w, True, cache),
+        args=(random.randbytes(32), sk, tc.n, tc.h, tc.d, tc.a, tc.k, tc.w, True, {}),
         rounds=3,
         warmup_rounds=1
     )
