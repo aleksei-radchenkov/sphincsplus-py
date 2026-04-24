@@ -55,7 +55,7 @@ docker run --rm sphincsplus pytest tests/ -q
 ## Benchmarking
 Execute the following command to perform benchmarking locally:
 ```bash
-docker build -t sphincsplus .
+docker build --build-arg WITH_BENCH=1 -t sphincsplus .
 docker run --rm sphincsplus pytest --benchmark-only
 ```
 
