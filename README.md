@@ -52,6 +52,10 @@ You can also run code in [demo.py](/demo.py). After you finish writing the code,
 docker build -t sphincsplus . && docker run -it sphincsplus python3 demo.py
 ```
 
+## Optimisation Notes
+
+By default, the Python code will not include our first novel optimisation (caching) when run through `demo.py` or the Interactive Sphincs+ Console, as the `merkle_cache` parameter for `keygen` and `sign` in [/sphincs.py](src/sphincsplus/sphincs.py) defaults to `None`. You must initialise an empty cache hashmap and pass it as the the last argument of `keygen` and `sign`. This is already handled in the tests and the benchmarks. 
+
 ## Tests
 
 Execute the following commands to run the tests:
