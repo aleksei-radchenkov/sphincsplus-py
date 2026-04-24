@@ -1,3 +1,20 @@
+# WOTS+ One-Time Signature Scheme with Constant-Sum Optimisation
+#
+# Based on: "Revisiting the Constant-Sum Winternitz One-Time Signature
+#            with Applications to SPHINCS+ and XMSS" (CRYPTO 2023)
+#            Zhang, Cui, Yu - https://eprint.iacr.org/2022/059
+#
+# Parameters:
+#
+#   n - security parameter (byte length of message, keys and signature elements)
+#   w - Winternitz parameter (must be a power of 2, typically 16)
+#
+# Overview:
+#
+# Improvement on the original WOTS+ implementation by using constant sum 
+# rather than a checksum, which reduces the overall signature size.
+
+
 import math
 from functools import lru_cache
 
