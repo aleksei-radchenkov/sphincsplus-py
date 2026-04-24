@@ -7,13 +7,7 @@ from .sphincs import (
 )
 
 __all__ = [
-    "adrs",
-    "fors",
     "keygen",
-    "merkle",
     "sign",
-    "sphincs",
-    "tree",
     "verify",
-    "wots",
 ]
