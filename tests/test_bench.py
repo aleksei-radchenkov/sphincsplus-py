@@ -31,7 +31,7 @@ test_cases = [
 @pytest.mark.parametrize("tc", test_cases, ids=lambda tc: tc.name)
 def test_keygen_without_cache(benchmark, tc):
     benchmark.pedantic(
-        keygen, args=(tc.n, tc.h, tc.d, tc.a, tc.k, tc.w), rounds=3, warmup_rounds=1
+        keygen, args=(tc.n, tc.h, tc.d, tc.a, tc.k, tc.w), rounds=5, warmup_rounds=1
     )
 
 
@@ -43,7 +43,7 @@ def test_keygen_with_cache(benchmark, tc):
     benchmark.pedantic(
         keygen,
         args=(tc.n, tc.h, tc.d, tc.a, tc.k, tc.w, cache),
-        rounds=3,
+        rounds=5,
         warmup_rounds=1
     )
 
@@ -57,7 +57,7 @@ def test_sign_without_cache(benchmark, tc):
     benchmark.pedantic(
         sign,
         args=(message, sk, tc.n, tc.h, tc.d, tc.a, tc.k, tc.w),
-        rounds=3,
+        rounds=5,
         warmup_rounds=1,
     )
 
@@ -72,7 +72,7 @@ def test_sign_with_cache(benchmark, tc):
     benchmark.pedantic(
         sign,
         args=(random.randbytes(32), sk, tc.n, tc.h, tc.d, tc.a, tc.k, tc.w, True, cache),
-        rounds=3,
+        rounds=5,
         warmup_rounds=1
     )
 
@@ -90,8 +90,7 @@ def test_verify_without_cache(benchmark, tc):
     benchmark.pedantic(
         verify,
         args=(message, sig, pk, tc.n, tc.h, tc.d, tc.a, tc.k, tc.w),
-        rounds=10,
-        iterations=1,
+        rounds=5,
         warmup_rounds=1,
     )
 
@@ -110,7 +109,6 @@ def test_verify_with_cache(benchmark, tc):
     benchmark.pedantic(
         verify,
         args=(message, sig, pk, tc.n, tc.h, tc.d, tc.a, tc.k, tc.w),
-        rounds=10,
-        iterations=10,
+        rounds=5,
         warmup_rounds=1
     )

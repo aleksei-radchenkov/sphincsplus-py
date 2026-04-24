@@ -22,7 +22,7 @@ def test_sign_without_cache(benchmark, d):
     benchmark.pedantic(
         sign,
         args=(MSG, sk, N, H, d, A, K, W, True, None),
-        rounds=3,
+        rounds=5,
         warmup_rounds=1,
     )
 
@@ -39,6 +39,6 @@ def test_sign_with_cache(benchmark, d):
     benchmark.pedantic(
         sign,
         args=(MSG, sk, N, H, d, A, K, W, True, cache),
-        rounds=3,
+        rounds=5,
         warmup_rounds=1,
     )

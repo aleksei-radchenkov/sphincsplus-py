@@ -19,6 +19,11 @@ The key parameters are:
 
 The file [/sphincs.py](src/sphincsplus/sphincs.py) holds the main SPHINCS+ functions for key generation, signing, and verification.
 
+The key functions are
+1. `sign(msg: bytes, sk, n, h, d, a, k, w, rand: boolean, merkle_cache: dict): bytes`
+2. `verify(msg: bytes, sk, pk, n, h, d, a, k, w): bool`
+3. `keygen(n, h, d, a, k, w, merkle_cache dict): tuple(sk, pk)`
+
 It is possible to run the program in two ways: through an interactive Python Console, and through a python script.
 
 ### Interactive Python Console
