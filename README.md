@@ -9,17 +9,15 @@ Install [Docker](https://www.docker.com/get-started/).
 
 ## Usage
 
-_TODO REWORD_
-n : the security parameter in bytes.
-w : the Winternitz parameter as defined in Section 3.1.
-h : the height of the hypertree as defined in Section 4.2.1.
-d : the number of layers in the hypertree as defined in Section 4.2.1.
-k : the number of trees in FORS as defined in Section 5.1.
-t : the number of leaves of a FORS tree as defined in Section 5.1
-m : the message digest length in bytes
+The key parameters are:
+- `n`: the security parameter, controlling the length of hashes, seeds, and signature elements, etc (in bytes). A larger `n `increases security but also increases key and signature sizes.
+- `w`: the Winternitz parameter, controlling the length of the hash chains in WOTS+, where a larger `w` reduces signature size at the cost of slower signing and verification.
+- `h`: total height of the hypertree, which determines the maximum number of signatures that can be produced under a single keypair (`2^h`).
+- `d`: number of layers the hypertree is split into, which trades off signing speed against key generation speed. A larger `d` means more layers to sign through but a shallower tree per layer.
+- `k` and `a`:  the FORS parameters. `k` is the number of FORS trees and `a` is their height. These parameters control the security/size of the FORS component.
+- `m`: the message digest length in bytes
 
-_TODO: Firstly explain the signatures of sphincs keygen, sign, and verify.
-Do we need to expose any additional functions and explain them for usage? I think we should document all the functions in `__all__` in `__init__.py` (or remove them if we don't intend users to import them)._
+The file [/sphincs.py](src/sphincsplus/sphincs.py) holds the main SPHINCS+ functions.
 
 It is possible to run the program in two ways: through an interactive Python Console, and through a python script.
 
