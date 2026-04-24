@@ -73,4 +73,14 @@ docker build -t sphincsplus .
 docker run --rm sphincsplus pytest --benchmark-only
 ```
 
-The benchmarking also automatically runs on every push and PR, and it can be found in the _Test_ section of the _test_ job in each _ci_ workflow, and the recent runs can be found [here](https://github.com/aleksei-radchenkov/sphincsplus-py/actions/workflows/ci.yml).
+Use the following command to perform comparative benchmarking to other cryptographic schemes:
+```bash
+docker build --build-arg WITH_COMPARISON=1 -t sphincsplus .
+docker run --rm sphincsplus pytest --benchmark-only --run-comparisons
+```
+
+At the moment we compare to 2 other cryptographic schemes:
+1 A classical signature signing algorithm using eleptic curve cryptography built into Python's standard library
+2. Annother post-quantum signature signing algorithm implementing XMSS, but which is stateful unlike Sphincs+.
+
+The standard benchmarking also automatically runs on every push and PR, and it can be found in the _Test_ section of the _test_ job in each _ci_ workflow, and the recent runs can be found [here](https://github.com/aleksei-radchenkov/sphincsplus-py/actions/workflows/ci.yml).

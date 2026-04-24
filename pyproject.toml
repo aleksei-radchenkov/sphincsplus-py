@@ -13,6 +13,7 @@ dependencies = []
 
 [project.optional-dependencies]
 dev = ["pytest", "pytest-benchmark", "flake8"]
+bench = ["pyqrllib", "cryptography"]
 
 [project.scripts]
 sphincsplus = "sphincsplus.__main__:main"
@@ -22,3 +23,6 @@ packages = ["src/sphincsplus"]
 
 [tool.pytest.ini_options]
 pythonpath = ["src"]
+markers = [
+	"comparison: marks tests that compare implementation benchmarks against external libraries",
+]
