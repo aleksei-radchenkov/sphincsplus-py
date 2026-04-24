@@ -45,4 +45,3 @@ def test_classical_verify(benchmark):
         iterations=1000,
         warmup_rounds=5
     )
-

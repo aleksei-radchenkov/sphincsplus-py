@@ -1,5 +1,6 @@
 import pytest
 
+
 def pytest_addoption(parser):
     parser.addoption(
         "--run-comparisons",
@@ -7,6 +8,7 @@ def pytest_addoption(parser):
         default=False,
         help="Benchmark the implementation compared to other cryptographic schemes",
     )
+
 
 def pytest_collection_modifyitems(config, items):
     if config.getoption("--run-comparisons"):
