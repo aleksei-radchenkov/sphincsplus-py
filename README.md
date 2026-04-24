@@ -17,7 +17,7 @@ The key parameters are:
 - `k` and `a`:  the FORS parameters. `k` is the number of FORS trees and `a` is their height. These parameters control the security/size of the FORS component.
 - `m`: the message digest length in bytes
 
-The file [/sphincs.py](src/sphincsplus/sphincs.py) holds the main SPHINCS+ functions.
+The file [/sphincs.py](src/sphincsplus/sphincs.py) holds the main SPHINCS+ functions for key generation, signing, and verification.
 
 It is possible to run the program in two ways: through an interactive Python Console, and through a python script.
 
