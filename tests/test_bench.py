@@ -12,55 +12,105 @@ class BenchCase(NamedTuple):
     a: int  # log(t)
     k: int
     w: int
-    m: int
 
 
 # these m values are wrong - maybe look here https://nvlpubs.nist.gov/nistpubs/fips/nist.fips.205.pdf
 test_cases = [
-    BenchCase("low security demo", 16, 8, 2, 4, 4, 16, 24),
-    BenchCase("SPHINCS+-128s", 16, 63, 7, 12, 14, 16, 133),
-    BenchCase("SPHINCS+-128f", 16, 66, 22, 6, 33, 16, 128),
-    BenchCase("SPHINCS+-192s", 24, 63, 7, 14, 17, 16, 193),
-    BenchCase("SPHINCS+-192f", 24, 66, 22, 8, 33, 16, 194),
-    BenchCase("SPHINCS+-256s", 32, 64, 8, 14, 22, 16, 255),
-    BenchCase("SPHINCS+-256f", 32, 68, 17, 9, 35, 16, 255),
+    BenchCase("low security demo", 16, 8, 2, 4, 4, 16),
+    BenchCase("SPHINCS+-128s", 16, 63, 7, 12, 14, 16),
+    BenchCase("SPHINCS+-128f", 16, 66, 22, 6, 33, 16),
+    BenchCase("SPHINCS+-192s", 24, 63, 7, 14, 17, 16),
+    BenchCase("SPHINCS+-192f", 24, 66, 22, 8, 33, 16),
+    BenchCase("SPHINCS+-256s", 32, 64, 8, 14, 22, 16),
+    BenchCase("SPHINCS+-256f", 32, 68, 17, 9, 35, 16),
 ]
 
 
+@pytest.mark.benchmark(group="keygen-wo-c")
 @pytest.mark.parametrize("tc", test_cases, ids=lambda tc: tc.name)
-def test_keygen(benchmark, tc):
+def test_keygen_without_cache(benchmark, tc):
     benchmark.pedantic(
         keygen,
-        args=(tc.n, tc.h, tc.d, tc.a, tc.k, tc.w, tc.m),
+        args=(tc.n, tc.h, tc.d, tc.a, tc.k, tc.w),
         rounds=3,
         warmup_rounds=1
     )
 
 
+@pytest.mark.benchmark(group="keygen-c")
+# caching should only affect signing time, so this is just a double-check
 @pytest.mark.parametrize("tc", test_cases, ids=lambda tc: tc.name)
-def test_sign(benchmark, tc):
-    sk, _ = keygen(tc.n, tc.h, tc.d, tc.a, tc.k, tc.w, tc.m)
+def test_keygen_with_cache(benchmark, tc):
+    cache = {}
+    benchmark.pedantic(
+        keygen,
+        args=(tc.n, tc.h, tc.d, tc.a, tc.k, tc.w, cache),
+        rounds=3,
+        warmup_rounds=1
+    )
+
+
+@pytest.mark.benchmark(group="sign-wo-c")
+@pytest.mark.parametrize("tc", test_cases, ids=lambda tc: tc.name)
+def test_sign_without_cache(benchmark, tc):
+    sk, _ = keygen(tc.n, tc.h, tc.d, tc.a, tc.k, tc.w)
 
     benchmark.pedantic(
         sign,
-        args=(random.randbytes(32), sk, tc.n, tc.h, tc.d, tc.a, tc.k, tc.w, tc.m),
+        args=(random.randbytes(32), sk, tc.n, tc.h, tc.d, tc.a, tc.k, tc.w),
         rounds=3,
         warmup_rounds=1
     )
 
 
+@pytest.mark.benchmark(group="sign-c")
 @pytest.mark.parametrize("tc", test_cases, ids=lambda tc: tc.name)
-def test_verify(benchmark, tc):
-    sk, pk = keygen(tc.n, tc.h, tc.d, tc.a, tc.k, tc.w, tc.m)
+def test_sign_with_cache(benchmark, tc):
+    cache = {}
+    sk, _ = keygen(tc.n, tc.h, tc.d, tc.a, tc.k, tc.w, cache)
+    assert len(cache) > 0
+
+    benchmark.pedantic(
+        sign,
+        args=(random.randbytes(32), sk, tc.n, tc.h, tc.d, tc.a, tc.k, tc.w, True, cache),
+        rounds=3,
+        warmup_rounds=1
+    )
+
+
+@pytest.mark.benchmark(group="verify-wo-c")
+@pytest.mark.parametrize("tc", test_cases, ids=lambda tc: tc.name)
+def test_verify_without_cache(benchmark, tc):
+    sk, pk = keygen(tc.n, tc.h, tc.d, tc.a, tc.k, tc.w)
 
     message = random.randbytes(32)
 
-    sig = sign(message, sk, tc.n, tc.h, tc.d, tc.a, tc.k, tc.w, tc.m)
+    sig = sign(message, sk, tc.n, tc.h, tc.d, tc.a, tc.k, tc.w)
 
     benchmark.pedantic(
         verify,
-        args=(message, sig, pk, tc.n, tc.h, tc.d, tc.a, tc.k, tc.w, tc.m),
-        rounds=5,
+        args=(message, sig, pk, tc.n, tc.h, tc.d, tc.a, tc.k, tc.w),
+        rounds=10,
+        iterations=10,
+        warmup_rounds=1
+    )
+
+
+@pytest.mark.benchmark(group="verify-c")
+# caching should only affect signing time, so this is just a double-check
+@pytest.mark.parametrize("tc", test_cases, ids=lambda tc: tc.name)
+def test_verify_with_cache(benchmark, tc):
+    cache = {}
+    sk, pk = keygen(tc.n, tc.h, tc.d, tc.a, tc.k, tc.w, cache)
+
+    message = random.randbytes(32)
+
+    sig = sign(message, sk, tc.n, tc.h, tc.d, tc.a, tc.k, tc.w, True, cache)
+
+    benchmark.pedantic(
+        verify,
+        args=(message, sig, pk, tc.n, tc.h, tc.d, tc.a, tc.k, tc.w),
+        rounds=10,
         iterations=10,
         warmup_rounds=1
     )
