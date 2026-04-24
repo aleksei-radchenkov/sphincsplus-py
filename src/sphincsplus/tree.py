@@ -1,9 +1,4 @@
-from .adrs import (
-    _adrs_new,
-    _adrs_set_layer,
-    _adrs_set_tree,
-)
-
+from .adrs import _adrs_new, _adrs_set_layer, _adrs_set_tree
 from .merkle import merkle_pk_gen, merkle_sig_to_pk, merkle_sign
 
 
@@ -17,6 +12,7 @@ def hypertree_pk_gen(sk_seed: bytes, pk_seed: bytes, h: int, d: int, n: int, w: 
     _adrs_set_tree(adrs, 0)
 
     return merkle_pk_gen(sk_seed, pk_seed, adrs, h // d, n, w, merkle_cache)
+
 
 # Generates the hypertree signature, made of (d) merkle signatures, each linking
 # one layer of the hypertree from the bottom leaf up to the top root.
@@ -104,15 +100,7 @@ def hypertree_verify(
     _adrs_set_layer(adrs, 0)
     _adrs_set_tree(adrs, tree_idx)
 
-    node = merkle_sig_to_pk(
-        [wots_sig, auth_path],
-        msg,
-        pk_seed,
-        adrs,
-        leaf_idx,
-        n,
-        w
-    )
+    node = merkle_sig_to_pk([wots_sig, auth_path], msg, pk_seed, adrs, leaf_idx, n, w)
 
     for j in range(1, d):
 
@@ -125,13 +113,7 @@ def hypertree_verify(
         _adrs_set_tree(adrs, tree_idx)
 
         node = merkle_sig_to_pk(
-            [wots_sig, auth_path],
-            node,
-            pk_seed,
-            adrs,
-            leaf_idx,
-            n,
-            w
+            [wots_sig, auth_path], node, pk_seed, adrs, leaf_idx, n, w
         )
 
     return node == pk_root

@@ -1,7 +1,9 @@
-import pytest
-from sphincsplus import keygen, sign, verify
+import secrets
 from typing import NamedTuple
 import random
+import pytest
+
+from sphincsplus import keygen, sign, sphincs, verify
 
 
 class BenchCase(NamedTuple):
@@ -14,7 +16,6 @@ class BenchCase(NamedTuple):
     w: int
 
 
-# these m values are wrong - maybe look here https://nvlpubs.nist.gov/nistpubs/fips/nist.fips.205.pdf
 test_cases = [
     BenchCase("low security demo", 16, 8, 2, 4, 4, 16),
     BenchCase("SPHINCS+-128s", 16, 63, 7, 12, 14, 16),
@@ -30,10 +31,7 @@ test_cases = [
 @pytest.mark.parametrize("tc", test_cases, ids=lambda tc: tc.name)
 def test_keygen_without_cache(benchmark, tc):
     benchmark.pedantic(
-        keygen,
-        args=(tc.n, tc.h, tc.d, tc.a, tc.k, tc.w),
-        rounds=3,
-        warmup_rounds=1
+        keygen, args=(tc.n, tc.h, tc.d, tc.a, tc.k, tc.w), rounds=3, warmup_rounds=1
     )
 
 
@@ -54,12 +52,13 @@ def test_keygen_with_cache(benchmark, tc):
 @pytest.mark.parametrize("tc", test_cases, ids=lambda tc: tc.name)
 def test_sign_without_cache(benchmark, tc):
     sk, _ = keygen(tc.n, tc.h, tc.d, tc.a, tc.k, tc.w)
+    message = secrets.token_bytes(32)
 
     benchmark.pedantic(
         sign,
-        args=(random.randbytes(32), sk, tc.n, tc.h, tc.d, tc.a, tc.k, tc.w),
+        args=(message, sk, tc.n, tc.h, tc.d, tc.a, tc.k, tc.w),
         rounds=3,
-        warmup_rounds=1
+        warmup_rounds=1,
     )
 
 
@@ -82,17 +81,18 @@ def test_sign_with_cache(benchmark, tc):
 @pytest.mark.parametrize("tc", test_cases, ids=lambda tc: tc.name)
 def test_verify_without_cache(benchmark, tc):
     sk, pk = keygen(tc.n, tc.h, tc.d, tc.a, tc.k, tc.w)
-
-    message = random.randbytes(32)
-
+    message = secrets.token_bytes(32)
     sig = sign(message, sk, tc.n, tc.h, tc.d, tc.a, tc.k, tc.w)
+
+    expected_len = sphincs.sig_bytes_len(tc.n, tc.h, tc.d, tc.a, tc.k, tc.w)
+    assert len(sig) == expected_len
 
     benchmark.pedantic(
         verify,
         args=(message, sig, pk, tc.n, tc.h, tc.d, tc.a, tc.k, tc.w),
         rounds=10,
-        iterations=10,
-        warmup_rounds=1
+        iterations=1,
+        warmup_rounds=1,
     )
 
 

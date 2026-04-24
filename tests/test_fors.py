@@ -1,8 +1,9 @@
-from sphincsplus import adrs, fors
+import math
+import secrets
 
 import pytest
-import secrets
-import math
+
+from sphincsplus import adrs, fors
 
 n = 16
 k = 10
@@ -53,7 +54,9 @@ def test_bad_leaf_fail(keypair, msg_chunk):
     sig_leafs, sig_auth = fors.fors_sign(msg_chunk, sk_seed, pk_seed, addr, k, a)
     bad_leafs = [bytes(n)] + sig_leafs[1:]
 
-    assert not fors.fors_verify((bad_leafs, sig_auth), msg_chunk, pk_seed, pk, addr, k, a)
+    assert not fors.fors_verify(
+        (bad_leafs, sig_auth), msg_chunk, pk_seed, pk, addr, k, a
+    )
 
 
 def test_bad_auth_fail(keypair, msg_chunk):
@@ -62,7 +65,9 @@ def test_bad_auth_fail(keypair, msg_chunk):
     sig_leafs, sig_auth = fors.fors_sign(msg_chunk, sk_seed, pk_seed, addr, k, a)
     bad_auth = [[bytes(n)] + sig_auth[0][1:]] + sig_auth[1:]
 
-    assert not fors.fors_verify((sig_leafs, bad_auth), msg_chunk, pk_seed, pk, addr, k, a)
+    assert not fors.fors_verify(
+        (sig_leafs, bad_auth), msg_chunk, pk_seed, pk, addr, k, a
+    )
 
 
 def test_wrong_pk_fail(keypair, msg_chunk):
@@ -71,7 +76,9 @@ def test_wrong_pk_fail(keypair, msg_chunk):
     sig_leafs, sig_auth = fors.fors_sign(msg_chunk, sk_seed, pk_seed, addr, k, a)
     fake_pk = secrets.token_bytes(n)
 
-    assert not fors.fors_verify((sig_leafs, sig_auth), msg_chunk, pk_seed, fake_pk, addr, k, a)
+    assert not fors.fors_verify(
+        (sig_leafs, sig_auth), msg_chunk, pk_seed, fake_pk, addr, k, a
+    )
 
 
 def test_gen_pk_is_sign_pk(keypair, msg_chunk):
@@ -79,6 +86,8 @@ def test_gen_pk_is_sign_pk(keypair, msg_chunk):
 
     sig_leafs, sig_auth = fors.fors_sign(msg_chunk, sk_seed, pk_seed, addr, k, a)
 
-    pk_from_s = fors.fors_sig_to_pk((sig_leafs, sig_auth), msg_chunk, pk_seed, addr, k, a)
+    pk_from_s = fors.fors_sig_to_pk(
+        (sig_leafs, sig_auth), msg_chunk, pk_seed, addr, k, a
+    )
 
     assert pk_direct == pk_from_s

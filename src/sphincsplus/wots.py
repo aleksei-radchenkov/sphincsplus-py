@@ -1,24 +1,25 @@
-# WOTS+ One-Time Signature Scheme
+# WOTS+ One-Time Signature Scheme with Constant-Sum Optimisation
+#
+# Based on: "Revisiting the Constant-Sum Winternitz One-Time Signature
+#            with Applications to SPHINCS+ and XMSS" (CRYPTO 2023)
+#            Zhang, Cui, Yu - https://eprint.iacr.org/2022/059
 #
 # Parameters:
 #
-# n - security paramter (length of message, keys and signature)
-# w - Winternitz parameter (in set of {4, 16, 256})
+#   n - security parameter (byte length of message, keys and signature elements)
+#   w - Winternitz parameter (must be a power of 2, typically 16)
 #
-# WOTS+ generates one-time signatures by iteratively hashing message into chains
-# of hash outputs and revealing parts of it to create a signature.
+# Overview:
+#
+# Improvement on the original WOTS+ implementation by using constant sum
+# rather than a checksum, which reduces the overall signature size.
+
 
 import math
+from functools import lru_cache
 
-from .adrs import (
-    _adrs_set_hash,
-    _adrs_set_chain,
-    _adrs_set_type,
-    _adrs_set_keypair,
-    _adrs_get_keypair,
-    TYPE_WOTS_PK
-)
-
+from .adrs import (TYPE_WOTS_PK, _adrs_get_keypair, _adrs_set_chain,
+                   _adrs_set_hash, _adrs_set_keypair, _adrs_set_type)
 from .hash import _f, _prf, _tl
 
 
@@ -26,86 +27,71 @@ def _log_w(w: int) -> int:
     return int(math.log2(w))
 
 
-def _get_len_1(n: int, w: int) -> int:
-    return math.ceil((8 * n) / _log_w(w))
+@lru_cache(maxsize=None)
+def _get_D(length: int, s: int, w: int) -> int:
+    if s < 0 or s > length * (w - 1):
+        return 0
+    if length == 0:
+        return 1 if s == 0 else 0
+
+    res = 0
+    for i in range(length + 1):
+        sign = (-1) ** i
+        comb_l_i = math.comb(length, i)
+        val = s - i * w + length - 1
+        if val >= length - 1:
+            res += sign * comb_l_i * math.comb(val, length - 1)
+    return res
 
 
-def _get_len_2(n: int, w: int) -> int:
-    return math.floor(math.log2(_get_len_1(n, w) * (w - 1)) / _log_w(w)) + 1
+def _constant_sum_encode(msg: bytes, length: int, w: int) -> list:
+    s = (length * (w - 1)) // 2
+    total = _get_D(length, s, w)
 
-# len - the number of n-byte-string elements in WOTS+ keys and signature.
+    x = int.from_bytes(msg, "big") % total
+    v = [0] * length
+    current_sum = s
+
+    for i in range(length, 0, -1):
+        chosen = min(w - 1, current_sum)
+        for j in range(min(w - 1, current_sum) + 1):
+            count = _get_D(i - 1, current_sum - j, w)
+            if x < count:
+                chosen = j
+                break
+            x -= count
+
+        v[length - i] = chosen
+        current_sum -= chosen
+
+    return v
 
 
 def get_len(n: int, w: int) -> int:
-    return _get_len_1(n, w) + _get_len_2(n, w)
+    return math.ceil((8 * n) / _log_w(w))
 
 
-def _base_w(msg: bytes, w: int, out_len: int) -> list:
-    assert w in {4, 16, 256}
-    assert out_len >= 0 and out_len <= (8 * len(msg)) // _log_w(w)
-
-    out = []
-    bits, val, i = 0, 0, 0
-
-    for _ in range(out_len):
-        if bits == 0:
-            val = msg[i]
-            i += 1
-            bits += 8
-
-        bits -= _log_w(w)
-        out.append((val >> bits) & (w - 1))
-
-    return out
-
-
-def _int_to_base_w(inp: int, w: int, out_len: int) -> list:
-    out = []
-
-    for i in range(out_len):
-        bits = _log_w(w) * (out_len - i - 1)
-        out.append((inp >> bits) & (w - 1))
-
-    return out
-
-
-# Computes an iteration of F on an n-byte input.
-def chain(msg: bytes, start: int, steps: int, pk_seed: bytes, adrs: bytearray, w: int) -> bytes | None:
+def chain(
+    msg: bytes, start: int, steps: int, pk_seed: bytes, adrs: bytearray, w: int
+) -> bytes | None:
     if start + steps > w - 1:
         return None
 
-    if steps == 0:
-        return msg
-
     tmp = msg
-
     for j in range(steps):
-        new_adrs = bytearray(adrs)
-        _adrs_set_hash(new_adrs, start + j)
-
-        tmp = _f(pk_seed, new_adrs, tmp)
-
+        _adrs_set_hash(adrs, start + j)
+        tmp = _f(pk_seed, adrs, tmp)
     return tmp
 
 
-def _gen_sk(sk_seed: bytes, adrs: bytearray, n: int, w: int) -> list:
-    out = []
-    for i in range(get_len(n, w)):
-        new_adrs = bytearray(adrs)
-
-        _adrs_set_chain(new_adrs, i)
-        _adrs_set_hash(new_adrs, 0)
-
-        out.append(_prf(sk_seed, new_adrs))
-
-    return out
-
-
-def wots_gen_pk(sk_seed: bytes, pk_seed: bytes, adrs: bytearray, n: int, w: int) -> bytes:
+def wots_gen_pk(
+    sk_seed: bytes, pk_seed: bytes, adrs: bytearray, n: int, w: int
+) -> bytes:
     pk_list = []
     pk_adrs = bytearray(adrs)
+    length = get_len(n, w)
 
-    for i in range(get_len(n, w)):
+    for i in range(length):
         new_adrs = bytearray(adrs)
         _adrs_set_chain(new_adrs, i)
         _adrs_set_hash(new_adrs, 0)
@@ -115,69 +101,48 @@ def wots_gen_pk(sk_seed: bytes, pk_seed: bytes, adrs: bytearray, n: int, w: int)
 
     _adrs_set_type(pk_adrs, TYPE_WOTS_PK)
     _adrs_set_keypair(pk_adrs, _adrs_get_keypair(adrs))
-
     return _tl(pk_seed, pk_adrs, b"".join(pk_list))
 
 
-def _checksum(msg_w: list, w: int, n: int) -> list:
-    s = sum(w - 1 - i for i in msg_w)
-    len_2 = _get_len_2(n, w)
-
-    log_w = _log_w(w)
-    if (log_w % 8) != 0:
-        s = s << (8 - ((len_2 * log_w) % 8))
-
-    len_2_bytes = math.ceil((len_2 * log_w) / 8)
-    s_bytes = int(s).to_bytes(len_2_bytes, "big")
-
-    return _base_w(s_bytes, w, len_2)
-
-
-# Generates the WOTS+ one-time signature
-def wots_sign(msg: bytes, sk_seed: bytes, pk_seed: bytes, adrs: bytearray, n: int, w: int) -> list:
-    msg_w = _base_w(msg, w, _get_len_1(n, w))
-    csum = _checksum(msg_w, w, n)
-    msg_c = msg_w + csum
+def wots_sign(
+    msg: bytes, sk_seed: bytes, pk_seed: bytes, adrs: bytearray, n: int, w: int
+) -> list:
+    length = get_len(n, w)
+    msg_c = _constant_sum_encode(msg, length, w)
 
     sig = []
-    length = get_len(n, w)
-
     for i in range(length):
         new_adrs = bytearray(adrs)
-
         _adrs_set_chain(new_adrs, i)
         _adrs_set_hash(new_adrs, 0)
 
         sk = _prf(sk_seed, new_adrs)
         sig.append(chain(sk, 0, msg_c[i], pk_seed, new_adrs, w))
-
     return sig
 
 
-# Computes the WOTS+ public key from signature
-def wots_sig_to_pk(sig: list, msg: bytes, pk_seed: bytes, adrs: bytearray, n: int, w: int) -> bytes:
-    msg_w = _base_w(msg, w, _get_len_1(n, w))
-    csum = _checksum(msg_w, w, n)
-    msg_c = msg_w + csum
+def wots_sig_to_pk(
+    sig: list, msg: bytes, pk_seed: bytes, adrs: bytearray, n: int, w: int
+) -> bytes:
+    length = get_len(n, w)
+    msg_c = _constant_sum_encode(msg, length, w)
 
     pk_list = []
     pk_adrs = bytearray(adrs)
-
-    for i in range(get_len(n, w)):
+    for i in range(length):
         new_adrs = bytearray(adrs)
-
         _adrs_set_chain(new_adrs, i)
         _adrs_set_hash(new_adrs, 0)
 
-        pk_list.append(
-            chain(sig[i], msg_c[i], w - 1 - msg_c[i], pk_seed, new_adrs, w)
-        )
+        pk_list.append(chain(sig[i], msg_c[i], w - 1 - msg_c[i], pk_seed, new_adrs, w))
 
     _adrs_set_type(pk_adrs, TYPE_WOTS_PK)
     _adrs_set_keypair(pk_adrs, _adrs_get_keypair(adrs))
-
     return _tl(pk_seed, pk_adrs, b"".join(pk_list))
 
 
-def wots_verify(sig: list, msg: bytes, pk_seed: bytes, pk: bytes, adrs: bytearray, n: int, w: int) -> bool:
-    return wots_sig_to_pk(sig, msg, pk_seed, adrs, n, w) == pk
+def wots_verify(
+    sig: list, msg: bytes, pk_seed: bytes, pk: bytes, adrs: bytearray, n: int, w: int
+) -> bool:
+    derived_pk = wots_sig_to_pk(sig, msg, pk_seed, adrs, n, w)
+    return derived_pk == pk

@@ -45,7 +45,7 @@ def _f(pk_seed: bytes, adrs: bytearray, m1: bytes) -> bytes:
 def _h(pk_seed: bytes, adrs: bytearray, m1: bytes, m2: bytes) -> bytes:
     masked = _mask_gen(pk_seed, adrs, m1 + m2)
 
-    mask_m1 = masked[:len(m1)]
+    mask_m1 = masked[: len(m1)]
     mask_m2 = masked[len(m1):]
 
     return _hash(pk_seed + adrs + mask_m1 + mask_m2, len(pk_seed))
