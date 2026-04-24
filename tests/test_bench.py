@@ -1,6 +1,6 @@
 import secrets
 from typing import NamedTuple
-
+import random
 import pytest
 
 from sphincsplus import keygen, sign, sphincs, verify
