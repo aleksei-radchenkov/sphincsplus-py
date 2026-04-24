@@ -1,23 +1,24 @@
 import random
 import pytest
 
-from cryptography.hazmat.primitives.asymmetric import ec
-from cryptography.hazmat.primitives import hashes
+# Comparison dependencies are optional unless --run-comparisons is used.
+ec = pytest.importorskip("cryptography.hazmat.primitives.asymmetric.ec")
+hashes = pytest.importorskip("cryptography.hazmat.primitives.hashes")
 
 
 @pytest.mark.comparison
-def test_classical_keygen(benchmark, tc):
+def test_classical_keygen(benchmark):
     benchmark.pedantic(
         ec.generate_private_key,
         args=(ec.SECP256R1(),),
         rounds=10,
-        iterations=100,
+        iterations=1000,
         warmup_rounds=5
     )
 
 
 @pytest.mark.comparison
-def test_classical_sign(benchmark, tc):
+def test_classical_sign(benchmark):
     private_key = ec.generate_private_key(ec.SECP256R1())
     message = random.randbytes(32)
 
@@ -25,13 +26,13 @@ def test_classical_sign(benchmark, tc):
         private_key.sign,
         args=(message, ec.ECDSA(hashes.SHA256())),
         rounds=10,
-        iterations=100,
+        iterations=1000,
         warmup_rounds=5
     )
 
 
 @pytest.mark.comparison
-def test_classical_verify(benchmark, tc):
+def test_classical_verify(benchmark):
     private_key = ec.generate_private_key(ec.SECP256R1())
     public_key = private_key.public_key()
     message = random.randbytes(32)
@@ -41,7 +42,7 @@ def test_classical_verify(benchmark, tc):
         public_key.verify,
         args=(signature, message, ec.ECDSA(hashes.SHA256())),
         rounds=10,
-        iterations=100,
+        iterations=1000,
         warmup_rounds=5
     )
 

@@ -53,11 +53,21 @@ docker run --rm sphincsplus pytest tests/ -q
 ```
 
 ## Benchmarking
-Execute the following command to perform benchmarking locally:
+Execute the following command to perform standard bencharmking locally:
 ```bash
-docker build --build-arg WITH_BENCH=1 -t sphincsplus .
+docker build -t sphincsplus .
 docker run --rm sphincsplus pytest --benchmark-only
 ```
+
+Use the following command to perform comparative benchmarking to other cryptographic schemes:
+```bash
+docker build --build-arg WITH_COMPARISON=1 -t sphincsplus .
+docker run --rm sphincsplus pytest --benchmark-only --run-comparisons
+```
+
+At the moment we compare to 2 other cryptographic schemes:
+1 A classical signature signing algorithm using eleptic curve cryptography built into Python's standard library
+2. Annother post-quantum signature signing algorithm implementing XMSS, but which is stateful unlike Sphincs+.
 
 
 
