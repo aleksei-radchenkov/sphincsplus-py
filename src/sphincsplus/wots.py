@@ -11,7 +11,7 @@
 #
 # Overview:
 #
-# Improvement on the original WOTS+ implementation by using constant sum 
+# Improvement on the original WOTS+ implementation by using constant sum
 # rather than a checksum, which reduces the overall signature size.
 
 
