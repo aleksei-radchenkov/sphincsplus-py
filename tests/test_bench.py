@@ -6,7 +6,7 @@ import pytest
 from sphincsplus import keygen, sign, sphincs, verify
 
 
-class TestCase(NamedTuple):
+class BenchCase(NamedTuple):
     name: str
     n: int
     h: int
@@ -17,13 +17,13 @@ class TestCase(NamedTuple):
 
 
 test_cases = [
-    TestCase("low-sec-demo-CS", 16, 8, 2, 4, 4, 16),
-    TestCase("SPHINCS+-128s-CS", 16, 63, 7, 12, 14, 16),
-    TestCase("SPHINCS+-128f-CS", 16, 66, 22, 6, 33, 16),
-    TestCase("SPHINCS+-192s-CS", 24, 63, 7, 14, 17, 16),
-    TestCase("SPHINCS+-192f-CS", 24, 66, 22, 8, 33, 16),
-    TestCase("SPHINCS+-256s-CS", 32, 64, 8, 14, 22, 16),
-    TestCase("SPHINCS+-256f-CS", 32, 68, 17, 9, 35, 16),
+    BenchCase("low security demo", 16, 8, 2, 4, 4, 16),
+    BenchCase("SPHINCS+-128s", 16, 63, 7, 12, 14, 16),
+    BenchCase("SPHINCS+-128f", 16, 66, 22, 6, 33, 16),
+    BenchCase("SPHINCS+-192s", 24, 63, 7, 14, 17, 16),
+    BenchCase("SPHINCS+-192f", 24, 66, 22, 8, 33, 16),
+    BenchCase("SPHINCS+-256s", 32, 64, 8, 14, 22, 16),
+    BenchCase("SPHINCS+-256f", 32, 68, 17, 9, 35, 16),
 ]
 
 
