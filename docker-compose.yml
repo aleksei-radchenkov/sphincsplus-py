@@ -1,5 +1,0 @@
-services:
-  sphincsplus:
-    build: .
-    volumes:
-      - .:/app

@@ -63,11 +63,11 @@ def sig_bytes_len(n: int, h: int, d: int, a: int, k: int, w: int) -> int:
     return n + fors_part + ht_part
 
 
-def keygen(n: int, h: int, d: int, a: int, k: int, w: int) -> tuple:
+def keygen(n: int, h: int, d: int, a: int, k: int, w: int, merkle_cache: dict | None = None) -> tuple:
     sk_seed = secrets.token_bytes(n)
     sk_prf = secrets.token_bytes(n)
     pk_seed = secrets.token_bytes(n)
-    pk_root = tree.hypertree_pk_gen(sk_seed, pk_seed, h, d, n, w)
+    pk_root = tree.hypertree_pk_gen(sk_seed, pk_seed, h, d, n, w, merkle_cache)
 
     sk = sk_seed + sk_prf + pk_seed + pk_root
     pk = pk_seed + pk_root
@@ -84,6 +84,7 @@ def sign(
     k: int,
     w: int,
     rand: bool = True,
+    merkle_cache: dict | None = None,
 ) -> bytes:
     m = _digest_bytes_len(h, d, k, a)
 
@@ -115,8 +116,7 @@ def sign(
     )
 
     ht_sig = tree.hypertree_sign(
-        fors_pk, sk_seed, pk_seed, tree_idx, leaf_idx, h, d, n, w
-    )
+        fors_pk, sk_seed, pk_seed, tree_idx, leaf_idx, h, d, n, w, merkle_cache=merkle_cache)
 
     body_f = bytearray()
     for i in range(k):
